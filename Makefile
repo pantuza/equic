@@ -5,6 +5,8 @@ DOCKER_TAG ?= local
 
 DOCKER_CMD := $(shell which docker)
 
+DOCKER_COMPOSE_CMD := $(shell which docker-compose)
+
 
 # Builds all docker images locally
 build: build_server build_client
@@ -18,3 +20,17 @@ build_server: $(DOCKERFILES_DIR)/Dockerfile.server
 build_client: $(DOCKERFILES_DIR)/Dockerfile.client
 	$(info Building eQUIC client docker image..)
 	@$(DOCKER_CMD) build --tag equic-client:$(DOCKER_TAG) --file $< --no-cache .
+
+
+start: $(DOCKERFILES_DIR)/docker-compose.yaml
+	$(info Running eQUIC client and server..)
+	@$(DOCKER_COMPOSE_CMD) --file $< up --detach
+
+
+stop: $(DOCKERFILES_DIR)/docker-compose.yaml
+	$(info Stopping eQUIC client and server..)
+	@$(DOCKER_COMPOSE_CMD) --file $< down --remove-orphans
+
+
+logs:
+	@$(DOCKER_CMD) logs --tail 100 --follow equic-server
