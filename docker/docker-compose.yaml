@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+
+  server:
+    container_name: equic-server
+    image: equic-server:local
+    cap_add: # Necessary to modify network interface
+      - NET_ADMIN
+      - SYS_ADMIN
+    networks:
+      - equic
+
+  client:
+    container_name: equic-client
+    image: equic-client:local
+    networks:
+      - equic
+
+networks:
+  equic:
