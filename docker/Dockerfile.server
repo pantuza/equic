@@ -1,0 +1,14 @@
+# Don't forget to run this container with --privileged option
+
+FROM alpine:latest
+
+RUN apk add --update iproute2 tcpdump clang linux-headers
+
+COPY . /server
+
+WORKDIR /server
+
+RUN clang -target bpf -c drop_world.c -o drop_world.o -O2
+
+CMD ip link set dev eth0 xdpdrv obj drop_world.o sec .text \
+    && tcpdump -tn -i eth0
