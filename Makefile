@@ -32,5 +32,18 @@ stop: $(DOCKERFILES_DIR)/docker-compose.yaml
 	@$(DOCKER_COMPOSE_CMD) --file $< down --remove-orphans
 
 
+restart: stop start
+
+
+restart_server:
+	$(info Restarting eQUIC server container..)
+	@$(DOCKER_CMD) restart equic-server
+
+
+restart_client:
+	$(info Restarting eQUIC client container..)
+	@$(DOCKER_CMD) restart equic-client
+
+
 logs:
 	@$(DOCKER_CMD) logs --tail 100 --follow equic-server
