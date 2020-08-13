@@ -21,6 +21,9 @@ build_client: $(DOCKERFILES_DIR)/Dockerfile.client
 	$(info Building eQUIC client docker image..)
 	@$(DOCKER_CMD) build --tag equic-client:$(DOCKER_TAG) --file $< --no-cache .
 
+build_mvfst: $(DOCKERFILES_DIR)/Dockerfile.client
+	$(info Building eQUIC docker image with mvfst..)
+	@$(DOCKER_CMD) build --tag equic:$(DOCKER_TAG) --file $< --no-cache --memory=8g --cpuset-cpus=0,1,2,3 .
 
 start: $(DOCKERFILES_DIR)/docker-compose.yaml
 	$(info Running eQUIC client and server..)
