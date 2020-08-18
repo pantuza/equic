@@ -75,10 +75,10 @@ load:
 	ip link set dev eth0 xdp obj drop.o sec drop
 
 unload:
-	ip link set dev eth0 xdpdrv off
+	ip link set dev eth0 xdp off
 
 debug:
-	$(ebpf_trace)
+	@cat /sys/kernel/debug/tracing/trace_pipe
 
 bpf_dev: unload compile load debug
 
