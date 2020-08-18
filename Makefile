@@ -8,20 +8,6 @@ DOCKER_CMD := $(shell which docker)
 DOCKER_COMPOSE_CMD := $(shell which docker-compose)
 
 
-#
-# Function to tail trace logs files while running eBPF
-# program
-#
-define ebpf_trace
-
-	while true; do \
-		tail -5 /sys/kernel/debug/tracing/trace; \
-		sleep .5; \
-	done;
-
-endef
-
-
 .DEFAULT_GOAL: help
 
 
