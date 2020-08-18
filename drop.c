@@ -7,6 +7,9 @@
 #include <bpf_helpers.h>
 
 
+#define UDP_QUOTA_LIMIT 5
+
+
 struct bpf_map_def SEC("maps") counters = {
     .type = BPF_MAP_TYPE_HASH,
     .key_size = sizeof(__u32),
