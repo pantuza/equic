@@ -69,5 +69,31 @@ restart_client:
 	@$(DOCKER_CMD) restart equic-client
 
 
+client_shell:
+	@docker exec -it equic-client bash
+
+server_shell:
+	@docker exec -it equic-server bash
+
 logs:
 	@$(DOCKER_CMD) logs --tail 100 --follow equic-server
+
+
+#
+# Targets to run XDP related tasks
+#
+compile:
+	clang -target bpf -O2 -c drop.c -o drop.o -I /libbpf/src/ -DDEBUG -D__BPF_TRACING__ -D__KERNEL__
+
+load:
+	ip link set dev eth0 xdp obj drop.o sec drop
+
+unload:
+	ip link set dev eth0 xdpdrv off
+
+debug:
+	$(ebpf_trace)
+
+bpf_dev: unload compile load debug
+
+bpf: unload compile load
