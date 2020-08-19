@@ -14,9 +14,22 @@ RUN apt-get update -y && \
                     zlib1g-dev binutils-dev libjemalloc-dev libssl-dev \
                     pkg-config  libsodium-dev
 
+
+# Builds Facebook mvfst project
 RUN git clone https://github.com/facebookincubator/mvfst.git && \
     cd mvfst && ./build_helper.sh
 
+
+#
+# Configures eQUIC
+#
 COPY . /equic
 
 WORKDIR /equic
+
+    # Mounts kernel tracing debug filesystem for debugging eBPF
+RUN mount -t debugfs none /sys/kernel/debug && \
+    # Needed to link asm/byteorder.h into eBPF
+    ln -s /usr/include/x86_64-linux-gnu/asm/ /usr/include/asm && \
+    # Clone libbpf standalone. Useful for coding outside the kernel source code
+    git clone https://github.com/libbpf/libbpf.git
