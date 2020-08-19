@@ -23,6 +23,9 @@ CFLAGS := -DDEBUG -D__BPF_TRACING__ -D__KERNEL__
 CFLAGS += $(INCLUDES)
 CFLAGS += $(OPTMIZATIONS)
 
+# C lang compiler
+CC := $(shell which clang)
+
 
 #
 # Target rules block
@@ -98,7 +101,7 @@ logs:
 #
 compile: equic.c
 	$(info Compiling eBPF kernel program)
-	clang -target bpf -c $< -o $(subst .c,.o,$<) $(CFLAGS)
+	$(CC) -target bpf -c $< -o $(subst .c,.o,$<) $(CFLAGS)
 
 load:
 	$(info Loading eBPF program on interface eth0)
