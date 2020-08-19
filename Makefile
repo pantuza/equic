@@ -1,4 +1,8 @@
 
+#
+# Variables block
+#
+
 DOCKERFILES_DIR := docker
 
 DOCKER_TAG ?= local
@@ -8,6 +12,21 @@ DOCKER_CMD := $(shell which docker)
 DOCKER_COMPOSE_CMD := $(shell which docker-compose)
 
 
+# External libraries path to be included
+INCLUDES := -I libbpf/src/
+
+# Compiler optimization options
+OPTMIZATIONS := -O2
+
+# C compilation flags
+CFLAGS := -DDEBUG -D__BPF_TRACING__ -D__KERNEL__
+CFLAGS += $(INCLUDES)
+CFLAGS += $(OPTMIZATIONS)
+
+
+#
+# Target rules block
+#
 .DEFAULT_GOAL: help
 
 
