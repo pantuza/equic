@@ -69,7 +69,7 @@ logs:
 # Targets to run XDP related tasks
 #
 compile:
-	clang -target bpf -O2 -c drop.c -o drop.o -I /libbpf/src/ -DDEBUG -D__BPF_TRACING__ -D__KERNEL__
+	clang -target bpf -O2 -c drop.c -o drop.o -I libbpf/src/ -DDEBUG -D__BPF_TRACING__ -D__KERNEL__
 
 load:
 	ip link set dev eth0 xdp obj drop.o sec drop
