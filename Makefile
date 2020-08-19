@@ -87,16 +87,20 @@ logs:
 #
 # Targets to run XDP related tasks
 #
-compile:
-	clang -target bpf -O2 -c drop.c -o drop.o -I libbpf/src/ -DDEBUG -D__BPF_TRACING__ -D__KERNEL__
+compile: equic.c
+	$(info Compiling eBPF kernel program)
+	clang -target bpf -c $< -o $(subst .c,.o,$<) $(CFLAGS)
 
 load:
-	ip link set dev eth0 xdp obj drop.o sec drop
+	$(info Loading eBPF program on interface eth0)
+	ip link set dev eth0 xdp obj equic.o sec equic
 
 unload:
+	$(info Unloading eBPF program from interface eth0)
 	ip link set dev eth0 xdp off
 
 debug:
+	$(info Entering debug mode)
 	@cat /sys/kernel/debug/tracing/trace_pipe
 
 bpf_dev: unload compile load debug
