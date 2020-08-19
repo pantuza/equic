@@ -5,7 +5,8 @@ services:
   server:
     container_name: equic-server
     image: equic:local
-    command: /mvfst/_build/build/quic/samples/echo -mode=server -host=0.0.0.0 -port=4433
+    command: tail -f
+    # command: /mvfst/_build/build/quic/samples/echo -mode=server -host=0.0.0.0 -port=4433
     volumes:
       - ..:/equic
     cap_add: # Necessary to modify network interface
