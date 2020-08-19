@@ -30,8 +30,17 @@ CFLAGS += $(OPTMIZATIONS)
 .DEFAULT_GOAL: help
 
 
-help:
+help: greetings
 	@echo "eQUIC available target rules"
+
+
+greetings:
+	@echo "        ___  _   _ ___ ____ "
+	@echo "   ___ / _ \| | | |_ _/ ___|"
+	@echo "  / _ \ | | | | | || | |    "
+	@echo " |  __/ |_| | |_| || | |___ "
+	@echo "  \___|\__\_\\\\\___/|___\____|"
+	@echo
 
 
 # Builds all docker images locally
@@ -103,6 +112,6 @@ debug:
 	$(info Entering debug mode)
 	@cat /sys/kernel/debug/tracing/trace_pipe
 
-bpf_dev: unload compile load debug
+bpf_dev: greetings unload compile load debug
 
-bpf: unload compile load
+bpf: greetings unload compile load
