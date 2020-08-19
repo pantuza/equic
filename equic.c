@@ -18,7 +18,7 @@ struct bpf_map_def SEC("maps") counters = {
 };
 
 
-SEC("drop")
+SEC("equic")
 int udp_quota (struct xdp_md *ctx)
 {
     __u32 key = 0;
