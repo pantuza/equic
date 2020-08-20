@@ -31,5 +31,14 @@ WORKDIR /equic
 RUN mount -t debugfs none /sys/kernel/debug && \
     # Needed to link asm/byteorder.h into eBPF
     ln -s /usr/include/x86_64-linux-gnu/asm/ /usr/include/asm && \
-    # Clone libbpf standalone. Useful for coding outside the kernel source code
-    git clone https://github.com/libbpf/libbpf.git
+
+# Clone and build libbpf as staticlibrary
+RUN git submodules update --init && \
+    cd libbpf/src && \
+    make && \
+    make install
+
+# Clones the master branch of linux kernel
+RUN git clone --depth 1 git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git && \
+    # Overrides all bpf headers with the latest ones from linux kernel source
+    cp linux/include/uapi/linux/bpf* /usr/include/linux/
