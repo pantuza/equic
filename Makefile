@@ -13,7 +13,7 @@ DOCKER_COMPOSE_CMD := $(shell which docker-compose)
 
 
 # External libraries path to be included
-INCLUDES := -I libbpf/src/
+INCLUDES := -I ./
 
 # Compiler optimization options
 OPTMIZATIONS := -O2
