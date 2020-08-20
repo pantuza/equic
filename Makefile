@@ -35,6 +35,26 @@ CC := $(shell which clang)
 
 help: greetings
 	@echo "eQUIC available target rules"
+	@echo
+	@echo "-- Host machine --"
+	@echo " build               Builds docker image"
+	@echo " start               Starts docker compose"
+	@echo " stop                Stops docker compose"
+	@echo " restart             Restarts docker containers"
+	@echo " client_shell        Runs a shell on the client container"
+	@echo " server_shell        Runs a shell on the server container"
+	@echo " logs                Tails the server application logs"
+	@echo
+	@echo "-- Inside the Container --"
+	@echo " compile             Compiles the eBPF program"
+	@echo " load                Loads the eBPF program into interface"
+	@echo " unload              Unloads the eBPF program into interface"
+	@echo " debug               Tails the eBPF program logs (trace_pipe)"
+	@echo " bpf_dev             Runs all targets to build load and debug eBPF"
+	@echo " bpf                 Runs all targets to build load eBPF program"
+	@echo " run_server          Runs the mvfst echo binary as a server"
+	@echo " run_client          Runs the mvfst echo binary as a client"
+	@echo
 
 
 greetings:
@@ -46,22 +66,11 @@ greetings:
 	@echo
 
 
-# Builds all docker images locally
-build: build_server build_client
-
-
-build_server: $(DOCKERFILES_DIR)/Dockerfile.server
-	$(info Building eQUIC server docker image..)
-	@$(DOCKER_CMD) build --tag equic-server:$(DOCKER_TAG) --file $< --no-cache .
-
-
-build_client: $(DOCKERFILES_DIR)/Dockerfile.client
-	$(info Building eQUIC client docker image..)
-	@$(DOCKER_CMD) build --tag equic-client:$(DOCKER_TAG) --file $< --no-cache .
-
-build_mvfst: $(DOCKERFILES_DIR)/Dockerfile.client
+# Builds docker images locally
+build: $(DOCKERFILES_DIR)/Dockerfile
 	$(info Building eQUIC docker image with mvfst..)
 	@$(DOCKER_CMD) build --tag equic:$(DOCKER_TAG) --file $< --no-cache --memory=8g --cpuset-cpus=0,1,2,3 .
+
 
 start: $(DOCKERFILES_DIR)/docker-compose.yaml
 	$(info Running eQUIC client and server..)
@@ -74,16 +83,6 @@ stop: $(DOCKERFILES_DIR)/docker-compose.yaml
 
 
 restart: stop start
-
-
-restart_server:
-	$(info Restarting eQUIC server container..)
-	@$(DOCKER_CMD) restart equic-server
-
-
-restart_client:
-	$(info Restarting eQUIC client container..)
-	@$(DOCKER_CMD) restart equic-client
 
 
 client_shell:
