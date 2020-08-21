@@ -35,7 +35,7 @@ WORKDIR /equic
 RUN ln -s /usr/include/x86_64-linux-gnu/asm/ /usr/include/asm
 
 # Clone and build libbpf as staticlibrary
-RUN git submodules update --init && \
+RUN git submodule update --init && \
     cd libbpf/src && \
     make && \
     make install
