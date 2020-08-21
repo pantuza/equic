@@ -27,10 +27,12 @@ COPY . /equic
 
 WORKDIR /equic
 
-    # Mounts kernel tracing debug filesystem for debugging eBPF
-RUN mount -t debugfs none /sys/kernel/debug && \
-    # Needed to link asm/byteorder.h into eBPF
-    ln -s /usr/include/x86_64-linux-gnu/asm/ /usr/include/asm && \
+# TODO: Check how we can do it cause docker build does not accept
+# Mounts kernel tracing debug filesystem for debugging eBPF
+# mount -t debugfs none /sys/kernel/debug && \
+
+# Needed to link asm/byteorder.h into eBPF
+RUN ln -s /usr/include/x86_64-linux-gnu/asm/ /usr/include/asm
 
 # Clone and build libbpf as staticlibrary
 RUN git submodules update --init && \
