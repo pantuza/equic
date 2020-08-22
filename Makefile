@@ -26,6 +26,20 @@ CFLAGS += $(OPTMIZATIONS)
 # C lang compiler
 CC := $(shell which clang)
 
+# Kernel trace file which eBPF prints debug messages
+TRACE_PIPE := /sys/kernel/debug/tracing/trace_pipe
+
+#
+# Checks if trace file exist. If not, mount it
+#
+define check_debugfs
+
+	@stat $(TRACE_PIPE) > /dev/null \
+		&& echo "Trace found" \
+		|| (echo "Mounting debugfs.." \
+			&& mount -t debugfs none /sys/kernel/debug)
+endef
+
 
 #
 # Target rules block
@@ -112,7 +126,11 @@ unload:
 
 debug:
 	$(info Entering debug mode)
-	@cat /sys/kernel/debug/tracing/trace_pipe
+	$(call check_debugfs)
+	@cat $(TRACE_PIPE)
+
+show:
+	@ip link show dev eth0
 
 bpf_dev: greetings unload compile load debug
 
