@@ -10,6 +10,7 @@ services:
     volumes:
       - ..:/equic
       - ../main.cpp:/mvfst/quic/samples/echo/main.cpp
+      - ../CMakeLists.txt:/mvfst/quic/samples/CMakeLists.txt
     cap_add: # Necessary to modify network interface
       - NET_ADMIN
       - SYS_ADMIN
