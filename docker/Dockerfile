@@ -5,7 +5,7 @@ ENV TZ=America/Sao_Paulo
 
 RUN apt-get update -y && \
     # Project dependencies
-    apt-get install -y iproute2 tcpdump git sudo dnsutils \
+    apt-get install -y iproute2 tcpdump git sudo dnsutils strace \
                        vim clang llvm libelf-dev && \
     # mvfst dependencies
     apt-get install -y g++ cmake libboost-all-dev libevent-dev \
