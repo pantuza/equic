@@ -64,6 +64,7 @@ help: greetings
 	@echo " load                Loads the eBPF program into interface"
 	@echo " unload              Unloads the eBPF program into interface"
 	@echo " debug               Tails the eBPF program logs (trace_pipe)"
+	@echo " show                Shows the network interface link state"
 	@echo " bpf_dev             Runs all targets to build load and debug eBPF"
 	@echo " bpf                 Runs all targets to build load eBPF program"
 	@echo " run_server          Runs the mvfst echo binary as a server"
