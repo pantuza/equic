@@ -4,7 +4,7 @@
 #include <linux/if_ether.h>
 #include <linux/ip.h>
 
-#include "libbpf/src/bpf_helpers.h"
+#include "bpf/bpf_helpers.h"
 
 
 #define UDP_QUOTA_LIMIT 5
@@ -14,7 +14,7 @@ struct bpf_map_def SEC("maps") counters = {
     .type = BPF_MAP_TYPE_HASH,
     .key_size = sizeof(__u32),
     .value_size = sizeof(__u64),
-    .max_entries = 512,
+    .max_entries = 16,
 };
 
 
