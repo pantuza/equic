@@ -65,7 +65,9 @@ help: greetings
 	@echo " logs                Tails the server application logs"
 	@echo
 	@echo "-- Inside the Container --"
-	@echo " compile             Compiles the eBPF program"
+	@echo " compile             Compiles the eQUIC for kernel and userspace"
+	@echo " kernel              Compiles the eBPF program for kernel"
+	@echo " userspace           Compiles the eQUIC user space program"
 	@echo " load                Loads the eBPF program into interface"
 	@echo " unload              Unloads the eBPF program into interface"
 	@echo " debug               Tails the eBPF program logs (trace_pipe)"
@@ -118,13 +120,19 @@ logs:
 #
 # Targets to run XDP related tasks
 #
-compile: $(SRC)/equic_kern.c
+compile: greetings kernel
+
+kernel: $(SRC)/equic_kern.c
 	$(info Compiling eBPF kernel program)
-	$(CC) -target bpf -c $< -o $(BIN)/$(subst .c,.o,$<) $(CFLAGS)
+	$(CC) -target bpf -c $< -o $(BIN)/equic_kern.o $(CFLAGS)
+
+userspace: $(SRC)/equic_user.c
+	$(info Compiling eBPF kernel program)
+	$(CC) $< -O2 -lbpf -lelf -lz -o $(BIN)/equic_user
 
 load:
 	$(info Loading eBPF program on interface $(IFACE))
-	ip link set dev $(IFACE) xdp obj $(BIN)/equic.o sec equic
+	ip link set dev $(IFACE) xdp obj $(BIN)/equic_kern.o sec equic
 
 unload:
 	$(info Unloading eBPF program from interface $(IFACE))
