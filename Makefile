@@ -136,15 +136,16 @@ debug:
 	@cat $(TRACE_PIPE)
 
 show:
-	@ip link show dev eth0
+	@ip link show dev $(IFACE)
 
 bpf_dev: greetings unload compile load debug
 
 bpf: greetings unload compile load
 
-run_server: /mvfst/_build/build/quic/samples/echo
-	 $< -mode=server -host=0.0.0.0 -port=4433
+run_server: /src/lsquic/echo_server
+	$(eval SSL_DIR=/src/equic/ssl)
+	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key -L debug
 
 run_client: /mvfst/_build/build/quic/samples/echo
 	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
-	 $< -mode=client -host=$(SRV_ADDR) -port=4433
+	$< -H localhost -s $(SRV_ADDR):12345
