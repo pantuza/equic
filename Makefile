@@ -22,8 +22,17 @@ CFLAGS += $(OPTMIZATIONS)
 # C lang compiler
 CC := $(shell which clang)
 
+# Source code directory
+SRC := src
+
+# Binary directory
+BIN := bin
+
 # Kernel trace file which eBPF prints debug messages
 TRACE_PIPE := /sys/kernel/debug/tracing/trace_pipe
+
+# Network interface to attach eBPF program
+IFACE ?= eth0
 
 #
 # Checks if trace file exist. If not, mount it
