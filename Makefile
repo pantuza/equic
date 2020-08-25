@@ -88,7 +88,7 @@ greetings:
 
 # Builds docker images locally
 build: $(DOCKERFILES_DIR)/Dockerfile
-	$(info Building eQUIC docker image with mvfst..)
+	$(info Building eQUIC docker image..)
 	@$(DOCKER_CMD) build --tag equic:$(DOCKER_TAG) --file $< --no-cache --memory=8g --cpuset-cpus=0,1,2,3 .
 
 
@@ -118,17 +118,17 @@ logs:
 #
 # Targets to run XDP related tasks
 #
-compile: equic.c
+compile: $(SRC)/equic_kern.c
 	$(info Compiling eBPF kernel program)
-	$(CC) -target bpf -c $< -o $(subst .c,.o,$<) $(CFLAGS)
+	$(CC) -target bpf -c $< -o $(BIN)/$(subst .c,.o,$<) $(CFLAGS)
 
 load:
-	$(info Loading eBPF program on interface eth0)
-	ip link set dev eth0 xdp obj equic.o sec equic
+	$(info Loading eBPF program on interface $(IFACE))
+	ip link set dev $(IFACE) xdp obj $(BIN)/equic.o sec equic
 
 unload:
-	$(info Unloading eBPF program from interface eth0)
-	ip link set dev eth0 xdp off
+	$(info Unloading eBPF program from interface $(IFACE))
+	ip link set dev $(IFACE) xdp off
 
 debug:
 	$(info Entering debug mode)
