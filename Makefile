@@ -89,9 +89,9 @@ greetings:
 
 
 # Builds docker images locally
-build: $(DOCKERFILES_DIR)/Dockerfile
+build: greetings $(DOCKERFILES_DIR)/Dockerfile
 	$(info Building eQUIC docker image..)
-	@$(DOCKER_CMD) build --tag equic:$(DOCKER_TAG) --file $< --no-cache --memory=8g --cpuset-cpus=0,1,2,3 .
+	@$(DOCKER_CMD) build --tag equic:$(DOCKER_TAG) --file $(word 2, $^) --no-cache --memory=8g --cpuset-cpus=0,1,2,3 .
 
 
 start: $(DOCKERFILES_DIR)/docker-compose.yaml
@@ -152,8 +152,8 @@ bpf: greetings unload compile load
 
 run_server: /src/lsquic/echo_server
 	$(eval SSL_DIR=/src/equic/ssl)
-	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key -L debug
+	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key -L info
 
-run_client: /mvfst/_build/build/quic/samples/echo
+run_client: /src/lsquic/echo_client
 	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
 	$< -H localhost -s $(SRV_ADDR):12345
