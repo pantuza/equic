@@ -6,11 +6,8 @@ services:
     container_name: equic-server
     image: equic:local
     command: tail -f
-    # command: /mvfst/_build/build/quic/samples/echo -mode=server -host=0.0.0.0 -port=4433
     volumes:
-      - ..:/equic
-      - ../main.cpp:/mvfst/quic/samples/echo/main.cpp
-      - ../CMakeLists.txt:/mvfst/quic/samples/CMakeLists.txt
+      - ..:/src/equic
     cap_add: # Necessary to modify network interface
       - NET_ADMIN
       - SYS_ADMIN
@@ -23,7 +20,7 @@ services:
     image: equic:local
     command: tail -f
     volumes:
-      - ..:/equic
+      - ..:/src/equic
     networks:
       - equic
 
