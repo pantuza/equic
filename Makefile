@@ -68,6 +68,7 @@ help: greetings
 	@echo " compile             Compiles the eQUIC for kernel and userspace"
 	@echo " kernel              Compiles the eBPF program for kernel"
 	@echo " userspace           Compiles the eQUIC user space program"
+	@echo " clean               Remove all files resulted by the compilations"
 	@echo " load                Loads the eBPF program into interface"
 	@echo " unload              Unloads the eBPF program into interface"
 	@echo " debug               Tails the eBPF program logs (trace_pipe)"
@@ -120,15 +121,18 @@ logs:
 #
 # Targets to run XDP related tasks
 #
-compile: greetings kernel
+compile: greetings kernel userspace
 
 kernel: $(SRC)/equic_kern.c
 	$(info Compiling eBPF kernel program)
 	$(CC) -target bpf -c $< -o $(BIN)/equic_kern.o $(CFLAGS)
 
 userspace: $(SRC)/equic_user.c
-	$(info Compiling eBPF kernel program)
+	$(info Compiling eQUIC userspace program)
 	$(CC) $< -O2 -lbpf -lelf -lz -o $(BIN)/equic_user
+
+clean: $(BIN)/*.o $(BIN)/equic_user
+	@rm -rv $^
 
 load:
 	$(info Loading eBPF program on interface $(IFACE))
