@@ -1,14 +1,10 @@
 #include <errno.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <libgen.h>
 #include <net/if.h>
 
 /* Linux OS dependent */
-#include <sys/resource.h>
 #include <linux/bpf.h>
 #include <linux/if_link.h>
 
@@ -19,11 +15,14 @@
 
 #include "equic_user.h"
 
+
 /* Network interface index */
 static int EQUIC_IFINDEX;
 
+
 /* eBPF program ID */
 static __u32 EQUIC_PROG_ID;
+
 
 /* XDP Flags used for eQUIC program */
 static unsigned int EQUIC_XDP_FLAGS = XDP_FLAGS_UPDATE_IF_NOEXIST;
