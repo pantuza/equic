@@ -168,10 +168,11 @@ main(int argc, char **argv)
   equic_read_object(&equic, "/src/equic/bin/equic_kern.o");
 
   /* Sets signal handlers */
-	signal(SIGINT, equic_sigint_callback);
-	signal(SIGTERM, equic_sigterm_callback);
+  signal(SIGINT, equic_sigint_callback);
+  signal(SIGTERM, equic_sigterm_callback);
 
-	equic_sync_counters(equic.counters_map_fd, 3);
+  equic_load(&equic);
+  equic_sync_counters(equic.counters_map_fd, 3);
 
-	return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
