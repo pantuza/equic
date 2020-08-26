@@ -7,7 +7,7 @@
 #include "bpf/bpf_helpers.h"
 
 
-#define UDP_QUOTA_LIMIT 5
+#define UDP_QUOTA_LIMIT 10
 
 
 struct bpf_map_def SEC("maps") counters = {
