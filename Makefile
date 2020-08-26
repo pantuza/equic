@@ -129,15 +129,15 @@ kernel: $(SRC)/equic_kern.c
 	$(CC) -target bpf -c $< -o $(BIN)/equic_kern.o $(CFLAGS)
 
 userspace: library
-	$(info Compiling eQUIC userspace program)
+	$(info Compiling eQUIC userspace program standalone program)
 	$(CC) $(SRC)/equic.c $(BIN)/equic_user.o -O2 -lbpf -lelf -lz -o $(BIN)/equic
 
 library: $(SRC)/equic_user.c
 	$(info Compiling eQUIC userspace as static library)
 	gcc -c $< -fPIE -O2 -o $(BIN)/equic_user.o
 
-clean: $(BIN)/*.o $(BIN)/equic_user $(BIN)/equic
-	@rm -rv $^
+clean:
+	@rm -rvf $(BIN)/equic $(wildcard $(BIN)/*.o)
 
 load:
 	$(info Loading eBPF program on interface $(IFACE))
