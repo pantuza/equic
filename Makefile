@@ -68,6 +68,7 @@ help: greetings
 	@echo " compile             Compiles the eQUIC for kernel and userspace"
 	@echo " kernel              Compiles the eBPF program for kernel"
 	@echo " userspace           Compiles the eQUIC user space program"
+	@echo " library             Builds eQUIC as a shared library"
 	@echo " clean               Remove all files resulted by the compilations"
 	@echo " load                Loads the eBPF program into interface"
 	@echo " unload              Unloads the eBPF program into interface"
@@ -127,11 +128,15 @@ kernel: $(SRC)/equic_kern.c
 	$(info Compiling eBPF kernel program)
 	$(CC) -target bpf -c $< -o $(BIN)/equic_kern.o $(CFLAGS)
 
-userspace: $(SRC)/equic_user.c
+userspace: library
 	$(info Compiling eQUIC userspace program)
-	$(CC) $< -O2 -lbpf -lelf -lz -o $(BIN)/equic_user
+	$(CC) $(SRC)/equic.c $(BIN)/equic_user.o -O2 -lbpf -lelf -lz -o $(BIN)/equic
 
-clean: $(BIN)/*.o $(BIN)/equic_user
+library: $(SRC)/equic_user.c
+	$(info Compiling eQUIC userspace as static library)
+	gcc -c $< -fPIE -O2 -o $(BIN)/equic_user.o
+
+clean: $(BIN)/*.o $(BIN)/equic_user $(BIN)/equic
 	@rm -rv $^
 
 load:
