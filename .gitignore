@@ -55,3 +55,6 @@ dkms.conf
 bin/*
 # except for .gitkeep file
 !bin/.gitkeep
+
+# temporary commands reminder file
+.command-reminder
