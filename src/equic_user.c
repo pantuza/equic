@@ -20,63 +20,158 @@
 #include "equic_user.h"
 
 
-int
-main(int argc, char **argv)
+/**
+ * SIGINT - Interruption signal callback
+ * It unloads eQUIC eBPF program from interface
+ */
+static void
+equic_sigint_callback (int signal)
 {
-	struct bpf_prog_load_attr prog_load_attr = {
-		.prog_type	= BPF_PROG_TYPE_XDP,
-        .file       = "equic.o",
-	};
+  printf("[eQUIC] Action=exit, Signal=INT\n");
+
+	__u32 prog_id = 0;
+
+	if ( bpf_get_link_xdp_id(EQUIC_IFINDEX, &prog_id, EQUIC_XDP_FLAGS) ) {
+		printf("[eQUIC] Error=CallError, Type=BPF, Function=bpf_get_link_xdp_id\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if ( prog_id == EQUIC_PROG_ID ) {
+
+		bpf_set_link_xdp_fd(EQUIC_IFINDEX, -1, EQUIC_XDP_FLAGS);
+		printf("[eQUIC] Action=Unload, Type=BPF, InterfaceIndex=%d\n", EQUIC_IFINDEX);
+
+  } else if (!prog_id) {
+		printf("[eQUIC] Error=NotFound, Type=BPF, Message=No program found\n");
+
+  } else {
+		printf("[eQUIC] Action=Update, Type=BPF\n");
+  }
+
+	exit(EXIT_SUCCESS);
+}
+
+
+/**
+ * SIGTERM - Termination signal callback
+ * It unloads eQUIC eBPF program from interface
+ */
+static void
+equic_sigterm_callback(int signal)
+{
+  printf("[eQUIC] Action=exit, Signal=TERM\n");
+
+  /* Meanwhile we just call the same behavior as SIGINT */
+  equic_sigint_callback(signal);
+}
+
+
+/**
+ * Communicate with Kernel space through eBPF Maps.
+ * Syncronize counters map with data from QUIC
+ */
+static void
+equic_sync_counters (int map_fd, int interval)
+{
+  while (true) {
+
+    printf("[eQUIC] Action=Sync, Type=BPF, Map=counters\n");
+    sleep(interval);
+  }
+}
+
+
+/**
+ * Reads the network interface index from
+ * a given name
+ */
+static void
+equic_get_interface (equic_t *equic, char if_name[])
+{
+	equic->if_index = if_nametoindex(if_name);
+  EQUIC_IFINDEX = equic->if_index;
+
+	if ( !equic->if_index ) {
+    printf("[eQUIC] Error=Name to index failed, Type=OS, Interface=%s\n", if_name);
+		exit(EXIT_FAILURE);
+	}
+
+  printf("[eQUIC] Action=Read, Type=OS, Interface=%d\n", equic->if_index);
+}
+
+/**
+ * Reads the .o object program to be loaded in the
+ * kernel. This functions reads all maps and the
+ * kernel hook function
+ */
+static void
+equic_read_object (equic_t *equic, char bpf_prog_path[])
+{
+  struct bpf_prog_load_attr prog_attr = {
+    .prog_type	= BPF_PROG_TYPE_XDP,
+    .file       = bpf_prog_path,
+  };
+	struct bpf_object *obj;
+
+	if ( bpf_prog_load_xattr(&prog_attr, &obj, &equic->prog_fd) ) {
+    printf("[eQUIC] Error=Load prog attr falied, Type=BPF\n");
+		exit(EXIT_FAILURE);
+  }
+  printf("[eQUIC] Action=Load, Type=BPF, Object=%s\n", bpf_prog_path);
+
+	struct bpf_map *map;
+	map = bpf_map__next(NULL, obj);
+	if ( !map ) {
+    printf("[eQUIC] Error=Find map failed, Type=BPF\n");
+		exit(EXIT_FAILURE);
+	}
+  equic->counters_map_fd = bpf_map__fd(map);
+  printf("[eQUIC] Action=Load, Type=BPF, Map=counters\n");
+
+	if ( !equic->prog_fd ) {
+    printf("[eQUIC] Error=%s, Type=BPF, Function=bpf_prog_load_xattr\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+}
+
+
+/**
+ * Loads the eBPF kernel program on the linux kernel
+ * XDP hook on the network interface
+ */
+static void
+equic_load (equic_t *equic)
+{
+	if (bpf_set_link_xdp_fd(equic->if_index, equic->prog_fd, EQUIC_XDP_FLAGS) < 0) {
+    printf("[eQUIC] Error=Link setup failed, Type=BPF, Function=bpf_set_link_xdp_fd\n");
+		exit(EXIT_FAILURE);
+	}
 
 	struct bpf_prog_info info = {};
 	__u32 info_len = sizeof(info);
-	const char *optstr = "FSN";
-	int prog_fd, map_fd, opt;
-	struct bpf_object *obj;
-	struct bpf_map *map;
-	int err;
 
-
-	EQUIC_IFINDEX = if_nametoindex("eth0");
-	if (!EQUIC_IFINDEX) {
-		perror("if_nametoindex");
-		return 1;
-	}
-
-	if (bpf_prog_load_xattr(&prog_load_attr, &obj, &prog_fd)) {
-		printf("Failed to load eBPF program attributes\n");
-		return 1;
-    }
-
-	map = bpf_map__next(NULL, obj);
-	if (!map) {
-		printf("finding a map in obj file failed\n");
-		return 1;
-	}
-	map_fd = bpf_map__fd(map);
-
-	if (!prog_fd) {
-		printf("bpf_prog_load_xattr: %s\n", strerror(errno));
-		return 1;
-	}
-
-	signal(SIGINT, sigint_callback);
-	signal(SIGTERM, sigterm_callback);
-
-	if (bpf_set_link_xdp_fd(EQUIC_IFINDEX, prog_fd, EQUIC_XDP_FLAGS) < 0) {
-		printf("link set xdp fd failed\n");
-		return 1;
-	}
-
-	err = bpf_obj_get_info_by_fd(prog_fd, &info, &info_len);
-	if (err) {
-		printf("can't get prog info - %s\n", strerror(errno));
-		return err;
+	if (bpf_obj_get_info_by_fd(equic->prog_fd, &info, &info_len)) {
+    printf("[eQUIC] Error=%s, Type=BPF, Function=bpf_obj_get_info_by_fd\n", strerror(errno));
+		exit(EXIT_FAILURE);
 	}
 	EQUIC_PROG_ID = info.id;
 
+  printf("[eQUIC] Action=Setup, Type=BPF, Hook=XDP\n");
+}
 
-	poll_stats(map_fd, 2);
+int
+main(int argc, char **argv)
+{
+  equic_t equic;
+
+  equic_get_interface(&equic, "eth0");
+  equic_read_object(&equic, "/src/equic/bin/equic_kern.o");
+
+  /* Sets signal handlers */
+	signal(SIGINT, equic_sigint_callback);
+	signal(SIGTERM, equic_sigterm_callback);
+
+	equic_sync_counters(equic.counters_map_fd, 3);
 
 	return EXIT_SUCCESS;
 }
