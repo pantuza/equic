@@ -23,7 +23,6 @@
 #include <bpf/libbpf.h>
 
 
-
 /* Network interface index */
 static int EQUIC_IFINDEX;
 
@@ -33,59 +32,43 @@ static __u32 EQUIC_PROG_ID;
 /* XDP Flags used for eQUIC program */
 static unsigned int EQUIC_XDP_FLAGS = XDP_FLAGS_UPDATE_IF_NOEXIST;
 
-
-/**
- * SIGINT - Interruption signal callback
- * It unloads eQUIC eBPF program from interface
- */
-static void sigint_callback(int signal)
+/* Struct used to store eQUIC public variables */
+struct equic_meta
 {
-  printf("[eQUIC] Action=exit, Signal=INT");
+  /* Interface Index */
+  int if_index;
 
-	__u32 prog_id = 0;
+  /* eBPF program file descriptor */
+  int prog_fd;
 
-	if ( bpf_get_link_xdp_id(EQUIC_IFINDEX, &prog_id, EQUIC_XDP_FLAGS) ) {
-		printf("[eQUIC] Error=CallError, Type=BPF, Function=bpf_get_link_xdp_id\n");
-		exit(EXIT_FAILURE);
-	}
+  /* Counters Map file descriptor */
+  int counters_map_fd;
 
-	if ( prog_id == EQUIC_PROG_ID ) {
+  /* eQUIC syncronization interval */
+  int sync_interval;
+};
 
-		bpf_set_link_xdp_fd(EQUIC_IFINDEX, -1, EQUIC_XDP_FLAGS);
-		printf("[eQUIC] Action=Unload, Type=BPF, InterfaceIndex=%d\n", EQUIC_IFINDEX);
+/* Create a public type to create equic_meta struct */
+typedef struct equic_meta equic_t;
 
-  } else if (!prog_id) {
-		printf("[eQUIC] Error=NotFound, Type=BPF, Message=No program found\n");
-
-  } else {
-		printf("[eQUIC] Action=Update, Type=BPF\n");
-  }
-
-	exit(EXIT_SUCCESS);
-}
 
 
 /**
- * SIGTERM - Termination signal callback
- * It unloads eQUIC eBPF program from interface
+ *
+ * Public functions of eQUIC module
+ *
  */
-static void sigterm_callback(int signal)
-{
-  printf("[eQUIC] Action=exit, Signal=TERM");
+static void equic_sigint_callback (int signal);
 
-  /* Meanwhile we just call the same behavior as SIGINT */
-  sigint_callback(signal);
-}
+static void equic_sigterm_callback (int signal);
 
+static void equic_get_interface (equic_t *equic, char if_name[]);
 
-/* simple per-protocol drop counter
- */
-static void poll_stats(int map_fd, int interval)
-{
-	while (1) {
-		sleep(interval);
-		printf("Reading counters map\n");
-	}
-}
+static void equic_read_object (equic_t *equic, char bpf_prog_path[]);
+
+static void equic_load (equic_t *equic);
+
+static void equic_sync_counters (int map_fd, int interval);
+
 
 #endif /* EQUIC_H */
