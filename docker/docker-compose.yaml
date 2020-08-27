@@ -8,6 +8,8 @@ services:
     command: tail -f
     volumes:
       - ..:/src/equic
+      - ../CMakeLists.txt:/src/lsquic/CMakeLists.txt
+      - ../echo_server.c:/src/lsquic/bin/echo_server.c
     cap_add: # Necessary to modify network interface
       - NET_ADMIN
       - SYS_ADMIN
@@ -15,8 +17,17 @@ services:
       - equic
     restart: always
 
-  client:
-    container_name: equic-client
+  client1:
+    container_name: equic-client-1
+    image: equic:local
+    command: tail -f
+    volumes:
+      - ..:/src/equic
+    networks:
+      - equic
+
+  client2:
+    container_name: equic-client-2
     image: equic:local
     command: tail -f
     volumes:
