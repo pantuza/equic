@@ -60,7 +60,8 @@ help: greetings
 	@echo " start               Starts docker compose"
 	@echo " stop                Stops docker compose"
 	@echo " restart             Restarts docker containers"
-	@echo " client_shell        Runs a shell on the client container"
+	@echo " client1_shell       Runs a shell on the client 1 container"
+	@echo " client2_shell       Runs a shell on the client 2 container"
 	@echo " server_shell        Runs a shell on the server container"
 	@echo " logs                Tails the server application logs"
 	@echo
@@ -109,8 +110,11 @@ stop: $(DOCKERFILES_DIR)/docker-compose.yaml
 restart: stop start
 
 
-client_shell:
-	@docker exec -it equic-client bash
+client1_shell:
+	@docker exec -it equic-client-1 bash
+
+client2_shell:
+	@docker exec -it equic-client-2 bash
 
 server_shell:
 	@docker exec -it equic-server bash
