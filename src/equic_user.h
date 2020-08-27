@@ -1,6 +1,8 @@
 #ifndef EQUIC_H
 #define EQUIC_H
 
+#include <arpa/inet.h>
+
 
 /* Struct used to store eQUIC public variables */
 struct equic_meta
@@ -38,7 +40,7 @@ void equic_read_object (equic_t *equic, char bpf_prog_path[]);
 
 void equic_load (equic_t *equic);
 
-void equic_sync_counters (int map_fd, int interval);
+void equic_sync_counters (equic_t *equic, const struct sockaddr *client);
 
 
 #endif /* EQUIC_H */
