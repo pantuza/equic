@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <net/if.h>
+#include <arpa/inet.h>
 
 /* Linux OS dependent */
 #include <linux/bpf.h>
@@ -79,12 +80,42 @@ equic_sigterm_callback(int signal)
  * Syncronize counters map with data from QUIC
  */
 void
-equic_sync_counters (int map_fd, int interval)
+equic_sync_counters (equic_t *equic, const struct sockaddr *client)
 {
-  while (true) {
 
-    printf("[eQUIC] Action=Sync, Type=BPF, Map=counters\n");
-    sleep(interval);
+  struct sockaddr_in *client_addr_in = (struct sockaddr_in *)client;
+
+  __be32 key = client_addr_in->sin_addr.s_addr;
+  char *addr = inet_ntoa(client_addr_in->sin_addr);
+
+  int value;
+
+  /* Lookup map using ip address as the key */
+  if (bpf_map_lookup_elem(equic->counters_map_fd, &key, &value) == 0) {
+
+    value = value + 1; /* If we find, increment the value */
+
+    /* Then update the map with the new value */
+    if(bpf_map_update_elem(equic->counters_map_fd, &key, &value, BPF_EXIST) == -1) {
+
+      printf("[eQUIC] Error=%s, Type=BPFMapUpdate, Function=bpf_map_update_elem\n", strerror(errno));
+    } else {
+      printf("[eQUIC] Action=Sync, Type=BPFMapUpdate, MapKey=%s, MapValue=%d\n", addr, value);
+    }
+
+  } else {
+
+    value = 1;  // First connection mean value 1
+
+    /* If we didn't find key, create it */
+    if(bpf_map_update_elem(equic->counters_map_fd, &key, &value, BPF_NOEXIST) == -1) {
+
+      /* Otherwise print the error */
+      printf("[eQUIC] Error=%s, Type=BPFMapCreate, Function=bpf_map_update_elem\n", strerror(errno));
+    } else {
+
+      printf("[eQUIC] Action=Sync, Type=BPFMapUpdate, MapKey=%s, MapValue=%d\n", addr, value);
+    }
   }
 }
 
