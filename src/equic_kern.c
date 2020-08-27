@@ -9,24 +9,14 @@
 #include "bpf/bpf_endian.h"
 
 
-#define UDP_QUOTA_LIMIT 10
+#define UDP_QUOTA_LIMIT 5
 
-
-struct map_key {
-    __be32 s_addr;
-    __be16 s_port;
-
-    __be32 d_addr;
-    __be16 d_port;
-};
-
-typedef struct map_key map_key_t;
 
 
 struct bpf_map_def SEC("maps") counters = {
     .type = BPF_MAP_TYPE_HASH,
-    .key_size = sizeof(map_key_t),
-    .value_size = sizeof(__u64),
+    .key_size = sizeof(__be32),
+    .value_size = sizeof(int),
     .max_entries = 1024,
 };
 
@@ -34,13 +24,8 @@ struct bpf_map_def SEC("maps") counters = {
 SEC("equic")
 int udp_quota (struct xdp_md *ctx)
 {
-    __u64 value = 0;
-    __u64 *curr_value;
-
-    map_key_t key;
-    __builtin_memset(&key, 0, sizeof(map_key_t));
-
-    // bpf_map_update_elem(&counters, &key, &value, BPF_NOEXIST);
+    __be32 key;
+    int value = 0;
 
     void *begin = (void *)(long)ctx->data;
     void *end = (void *)(long)ctx->data_end;
@@ -55,8 +40,7 @@ int udp_quota (struct xdp_md *ctx)
         return XDP_ABORTED;
     }
 
-    key.s_addr = ip->saddr;
-    key.d_addr = ip->daddr;
+    key = ip->saddr;
 
     if (ip->protocol == IPPROTO_UDP) {
 
@@ -65,16 +49,10 @@ int udp_quota (struct xdp_md *ctx)
             return XDP_ABORTED;
         }
 
-        key.s_port = udp->source;
-        key.d_port = udp->dest;
-
-        curr_value = bpf_map_lookup_elem(&counters, &key);
+        int *curr_value = bpf_map_lookup_elem(&counters, &key);
         if(!curr_value) {
 #ifdef DEBUG
-        bpf_printk("[XDP] UDP=true, Action=Pass, Status=LookupMiss Key=(%d,%d)\n",
-                    bpf_ntohl(key.s_port), bpf_ntohl(key.d_port));
-//                   inet_ntoa(key.s_addr), ntohl(key.s_port),
-//                   inet_ntoa(key.d_addr), ntohl(key.d_port));
+        bpf_printk("[XDP] UDP=true, Action=Pass, Status=LookupMiss Key=%d\n", key);
 #endif
 
             return XDP_PASS;
@@ -87,11 +65,8 @@ int udp_quota (struct xdp_md *ctx)
             return XDP_DROP;
         }
 
-        *curr_value += 1;
-        bpf_map_update_elem(&counters, &key, curr_value, BPF_EXIST);
-
 #ifdef DEBUG
-        bpf_printk("[XDP] Action=Pass, UDP=true\n");
+        bpf_printk("[XDP] Action=Pass, UDP=true, Status=LookupHit Key=%s\n", key);
 #endif
         return XDP_PASS;
     }
