@@ -140,6 +140,10 @@ library: $(SRC)/equic_user.c
 	$(info Compiling eQUIC userspace as static library)
 	gcc -c $< -fPIE -O2 -o $(BIN)/equic_user.o
 
+echo:
+	$(info Compiling lsquic echo server with eQUIC offload)
+	@cd /src/lsquic && make echo_server
+
 clean:
 	@rm -rvf $(BIN)/equic $(wildcard $(BIN)/*.o)
 
@@ -165,7 +169,7 @@ bpf: greetings unload compile load
 
 run_server: /src/lsquic/echo_server
 	$(eval SSL_DIR=/src/equic/ssl)
-	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key -L info
+	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key
 
 run_client: /src/lsquic/echo_client
 	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
