@@ -17,7 +17,6 @@ main(int argc, char **argv)
   signal(SIGTERM, equic_sigterm_callback);
 
   equic_load(&equic);
-  equic_sync_counters(equic.counters_map_fd, 3);
 
   return EXIT_SUCCESS;
 }
