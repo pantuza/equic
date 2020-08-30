@@ -9,18 +9,29 @@
 #include "bpf/bpf_endian.h"
 
 
-#define UDP_QUOTA_LIMIT 5
+#define QUIC_QUOTA_LIMIT 5
 
 
 
+/* Map that controls connections counter by source IP */
 struct bpf_map_def SEC("maps") counters = {
+
     .type = BPF_MAP_TYPE_HASH,
+
+    /* A 32 bits representing the source IPv4 address */
     .key_size = sizeof(__be32),
+
+    /* A integer counter of the connections */
     .value_size = sizeof(int),
+
     .max_entries = 1024,
 };
 
 
+/**
+ * eQUIC XDP hook that verifies if a given source IPv4 address
+ * has reached its connection quota limit
+ */
 SEC("equic")
 int udp_quota (struct xdp_md *ctx)
 {
@@ -58,7 +69,7 @@ int udp_quota (struct xdp_md *ctx)
             return XDP_PASS;
         }
 
-        if (*curr_value >= UDP_QUOTA_LIMIT) {
+        if (*curr_value >= QUIC_QUOTA_LIMIT) {
 #ifdef DEBUG
             bpf_printk("[XDP] Action=Drop QuotaExceeded=%llu\n", *curr_value);
 #endif
@@ -70,7 +81,6 @@ int udp_quota (struct xdp_md *ctx)
 #endif
         return XDP_PASS;
     }
-
 
 #ifdef DEBUG
     bpf_printk("[XDP] Action=Pass, UDP=false\n");
