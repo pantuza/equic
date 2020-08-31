@@ -40,7 +40,9 @@ void equic_read_object (equic_t *equic, char bpf_prog_path[]);
 
 void equic_load (equic_t *equic);
 
-void equic_sync_counters (equic_t *equic, const struct sockaddr *client);
+void equic_inc_counter (equic_t *equic, const struct sockaddr *client);
+
+void equic_dec_counter (equic_t *equic, const struct sockaddr *client);
 
 
 #endif /* EQUIC_H */
