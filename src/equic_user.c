@@ -111,10 +111,46 @@ equic_inc_counter (equic_t *equic, const struct sockaddr *client)
     if(bpf_map_update_elem(equic->counters_map_fd, &key, &value, BPF_NOEXIST) == -1) {
 
       /* Otherwise print the error */
-      printf("[eQUIC] Error=%s, Type=BPFMapCreate, Function=bpf_map_update_elem\n", strerror(errno));
+      printf("[eQUIC] Action=CounterCreation, Error=%s, Type=BPFMapUpdate, Function=bpf_map_update_elem\n", strerror(errno));
     } else {
 
-      printf("[eQUIC] Action=Sync, Type=BPFMapUpdate, MapKey=%s, MapValue=%d\n", addr, value);
+      printf("[eQUIC] Action=CounterCreation, Type=BPFMapUpdate, MapKey=%s, MapValue=%d\n", addr, value);
+    }
+  }
+}
+
+
+/**
+ * Communicate with Kernel space through eBPF Maps.
+ * Increment counters map with data from QUIC
+ */
+void
+equic_dec_counter (equic_t *equic, const struct sockaddr *client)
+{
+
+  struct sockaddr_in *client_addr_in = (struct sockaddr_in *)client;
+
+  __be32 key = client_addr_in->sin_addr.s_addr;
+  char *addr = inet_ntoa(client_addr_in->sin_addr);
+
+  int value;
+
+  /* Lookup map using ip address as the key */
+  if (bpf_map_lookup_elem(equic->counters_map_fd, &key, &value) == 0) {
+
+    if (value == 0) {
+        return;  // No counters to be udpated
+    }
+
+    /* Otherwise, decrement the current counter */
+    value = value - 1;
+
+    /* Then update the map with the new value */
+    if(bpf_map_update_elem(equic->counters_map_fd, &key, &value, BPF_EXIST) == -1) {
+
+      printf("[eQUIC] Action=CounterDecrement, Error=%s, Type=BPFMapUpdate, Function=bpf_map_update_elem\n", strerror(errno));
+    } else {
+      printf("[eQUIC] Action=CounterDecrement, Type=BPFMapUpdate, MapKey=%s, MapValue=%d\n", addr, value);
     }
   }
 }
