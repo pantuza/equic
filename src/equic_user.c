@@ -77,10 +77,10 @@ equic_sigterm_callback(int signal)
 
 /**
  * Communicate with Kernel space through eBPF Maps.
- * Syncronize counters map with data from QUIC
+ * Increment counters map with data from QUIC
  */
 void
-equic_sync_counters (equic_t *equic, const struct sockaddr *client)
+equic_inc_counter (equic_t *equic, const struct sockaddr *client)
 {
 
   struct sockaddr_in *client_addr_in = (struct sockaddr_in *)client;
@@ -98,9 +98,9 @@ equic_sync_counters (equic_t *equic, const struct sockaddr *client)
     /* Then update the map with the new value */
     if(bpf_map_update_elem(equic->counters_map_fd, &key, &value, BPF_EXIST) == -1) {
 
-      printf("[eQUIC] Error=%s, Type=BPFMapUpdate, Function=bpf_map_update_elem\n", strerror(errno));
+      printf("[eQUIC] Action=CounterIncrement, Error=%s, Type=BPFMapUpdate, Function=bpf_map_update_elem\n", strerror(errno));
     } else {
-      printf("[eQUIC] Action=Sync, Type=BPFMapUpdate, MapKey=%s, MapValue=%d\n", addr, value);
+      printf("[eQUIC] Action=CounterIncrement, Type=BPFMapUpdate, MapKey=%s, MapValue=%d\n", addr, value);
     }
 
   } else {
