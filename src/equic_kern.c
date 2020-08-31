@@ -1,14 +1,18 @@
-
+/* Linux headers for bpf and networking */
 #include <linux/bpf.h>
 #include <linux/in.h>
 #include <linux/if_ether.h>
 #include <linux/ip.h>
 #include <linux/udp.h>
 
+/* libbpf header files */
 #include "bpf/bpf_helpers.h"
 #include "bpf/bpf_endian.h"
 
 
+/**
+ * Maximum simultaneous connections allowed from a given source IPv4 address
+ */
 #define QUIC_QUOTA_LIMIT 5
 
 
@@ -28,6 +32,7 @@ struct bpf_map_def SEC("maps") counters = {
 };
 
 
+
 /**
  * eQUIC XDP hook that verifies if a given source IPv4 address
  * has reached its connection quota limit
@@ -41,8 +46,10 @@ int udp_quota (struct xdp_md *ctx)
     void *begin = (void *)(long)ctx->data;
     void *end = (void *)(long)ctx->data_end;
 
+    /* Assign a Ethernet header */
     struct ethhdr *eth = begin;
 
+    /* Assign a IPv4 header */
     int ip_begin = sizeof(*eth);
     struct iphdr *ip = begin + ip_begin;
     int ip_end = ip_begin + sizeof(struct iphdr);
@@ -51,10 +58,12 @@ int udp_quota (struct xdp_md *ctx)
         return XDP_ABORTED;
     }
 
+    /* Reads the packet source IPv4 address used as map key */
     key = ip->saddr;
 
     if (ip->protocol == IPPROTO_UDP) {
 
+        /* Assigns a UDP header */
         struct udphdr *udp = (void*)ip + sizeof(*ip);
         if ((void *)udp + sizeof(*udp) > end) {
             return XDP_ABORTED;
@@ -69,6 +78,10 @@ int udp_quota (struct xdp_md *ctx)
             return XDP_PASS;
         }
 
+        /**
+         * Start droping traffic from the given IPv4 address once it
+         * reached the simultaneous QUIC connections quota
+         */
         if (*curr_value >= QUIC_QUOTA_LIMIT) {
 #ifdef DEBUG
             bpf_printk("[XDP] Action=Drop QuotaExceeded=%llu\n", *curr_value);
@@ -77,7 +90,7 @@ int udp_quota (struct xdp_md *ctx)
         }
 
 #ifdef DEBUG
-        bpf_printk("[XDP] Action=Pass, UDP=true, Status=LookupHit Key=%s\n", key);
+        bpf_printk("[XDP] Action=Pass, UDP=true, Status=LookupHit Key=%d\n", key);
 #endif
         return XDP_PASS;
     }
@@ -87,5 +100,6 @@ int udp_quota (struct xdp_md *ctx)
 #endif
     return XDP_PASS;
 }
+
 
 char _license[] SEC("license") = "GPL";
