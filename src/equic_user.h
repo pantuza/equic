@@ -15,9 +15,6 @@ struct equic_meta
 
   /* Counters Map file descriptor */
   int counters_map_fd;
-
-  /* eQUIC syncronization interval */
-  int sync_interval;
 };
 
 /* Create a public type to create equic_meta struct */
