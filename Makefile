@@ -70,6 +70,8 @@ help: greetings
 	@echo " kernel              Compiles the eBPF program for kernel"
 	@echo " userspace           Compiles the eQUIC user space program"
 	@echo " library             Builds eQUIC as a shared library"
+	@echo " echo                Builds lsquic echo server with eQUIC"
+	@echo " http                Builds lsquic http server with eQUIC"
 	@echo " clean               Remove all files resulted by the compilations"
 	@echo " load                Loads the eBPF program into interface"
 	@echo " unload              Unloads the eBPF program into interface"
@@ -77,8 +79,10 @@ help: greetings
 	@echo " show                Shows the network interface link state"
 	@echo " bpf_dev             Runs all targets to build load and debug eBPF"
 	@echo " bpf                 Runs all targets to build load eBPF program"
-	@echo " run_server          Runs the mvfst echo binary as a server"
-	@echo " run_client          Runs the mvfst echo binary as a client"
+	@echo " run_server          Runs the lsquic echo binary as a server"
+	@echo " run_client          Runs the lsquic echo binary as a client"
+	@echo " http_server         Runs the lsquic http binary as a server"
+	@echo " http_client         Runs the lsquic http binary as a client"
 	@echo
 
 
