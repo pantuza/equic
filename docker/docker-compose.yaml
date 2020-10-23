@@ -10,6 +10,7 @@ services:
       - ..:/src/equic
       - ../CMakeLists.txt:/src/lsquic/CMakeLists.txt
       - ../echo_server.c:/src/lsquic/bin/echo_server.c
+      - ../http_server.c:/src/lsquic/bin/http_server.c
     cap_add: # Necessary to modify network interface
       - NET_ADMIN
       - SYS_ADMIN
