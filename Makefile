@@ -28,11 +28,20 @@ SRC := src
 # Binary directory
 BIN := bin
 
+# Logs directory
+LOGS := logs
+
+# Log suffix used to name files
+LOG_SUFFIX ?= baseline
+
 # Kernel trace file which eBPF prints debug messages
 TRACE_PIPE := /sys/kernel/debug/tracing/trace_pipe
 
 # Network interface to attach eBPF program
 IFACE ?= eth0
+
+# Current timestamp
+NOW := $(shell date +%s)
 
 #
 # Checks if trace file exist. If not, mount it
@@ -73,6 +82,7 @@ help: greetings
 	@echo " echo                Builds lsquic echo server with eQUIC"
 	@echo " http                Builds lsquic http server with eQUIC"
 	@echo " clean               Remove all files resulted by the compilations"
+	@echo " clean_logs          Remove all log files from logging directory"
 	@echo " load                Loads the eBPF program into interface"
 	@echo " unload              Unloads the eBPF program into interface"
 	@echo " debug               Tails the eBPF program logs (trace_pipe)"
