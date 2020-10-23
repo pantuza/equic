@@ -190,7 +190,7 @@ equic_read_object (equic_t *equic, char bpf_prog_path[])
   struct bpf_object *obj;
 
   if ( bpf_prog_load_xattr(&prog_attr, &obj, &equic->prog_fd) ) {
-    printf("[eQUIC] Error=Load prog attr falied, Type=BPF\n");
+    printf("[eQUIC] Error=Load prog attr failed, Type=BPF\n");
     exit(EXIT_FAILURE);
   }
   printf("[eQUIC] Action=Load, Type=BPF, Object=%s\n", bpf_prog_path);
