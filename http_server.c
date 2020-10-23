@@ -365,6 +365,10 @@ static lsquic_conn_ctx_t *
 http_server_on_new_conn (void *stream_if_ctx, lsquic_conn_t *conn)
 {
     struct server_ctx *server_ctx = stream_if_ctx;
+
+    /* Reads cpu time at connection start */
+    clock_gettime(CLOCK_MONOTONIC, &server_ctx->begin_t);
+
     lsquic_conn_ctx_t *conn_h = malloc(sizeof(*conn_h));
     conn_h->conn = conn;
     conn_h->server_ctx = server_ctx;
@@ -438,6 +442,15 @@ http_server_on_conn_closed (lsquic_conn_t *conn)
      * Decrement eQUIC Kernel counters Map key for the give peer (client)
      */
     equic_dec_counter(conn_h->server_ctx->equic, peer);
+
+    /* Reads cpu time at connection end */
+    clock_gettime(CLOCK_MONOTONIC, &conn_h->server_ctx->end_t);
+    double ms = (
+                    (conn_h->server_ctx->end_t.tv_sec * 1.0e9 + conn_h->server_ctx->end_t.tv_nsec)
+                 -
+                    (conn_h->server_ctx->begin_t.tv_sec * 1.0e9 + conn_h->server_ctx->begin_t.tv_nsec)
+                 ) / 1.0e6;
+    printf("[eQUIC] RequestDuration=%.3f, Begin=%.3ld, End=%.3ld\n", ms, conn_h->server_ctx->begin_t.tv_nsec, conn_h->server_ctx->end_t.tv_nsec);
 
     /* No provision is made to stop HTTP server */
     free(conn_h);
