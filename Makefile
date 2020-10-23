@@ -182,3 +182,11 @@ run_server: /src/lsquic/echo_server
 run_client: /src/lsquic/echo_client
 	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
 	$< -H localhost -s $(SRV_ADDR):12345
+
+http_server: /src/lsquic/http_server
+	$(eval SSL_DIR=/src/equic/ssl)
+	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key
+
+http_client: /src/lsquic/http_client
+	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
+	$< -H localhost -s $(SRV_ADDR):12345 -p /1024K
