@@ -148,6 +148,10 @@ echo:
 	$(info Compiling lsquic echo server with eQUIC offload)
 	@cd /src/lsquic && make echo_server
 
+http:
+	$(info Compiling lsquic HTTP server with eQUIC offload)
+	@cd /src/lsquic && make http_server
+
 clean:
 	@rm -rvf $(BIN)/equic $(wildcard $(BIN)/*.o)
 
