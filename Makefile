@@ -165,6 +165,9 @@ http:
 clean:
 	@rm -rvf $(BIN)/equic $(wildcard $(BIN)/*.o)
 
+clean_logs:
+	@rm -rvf $(LOGS)/*.log
+
 load:
 	$(info Loading eBPF program on interface $(IFACE))
 	ip link set dev $(IFACE) xdp obj $(BIN)/equic_kern.o sec equic
@@ -195,7 +198,7 @@ run_client: /src/lsquic/echo_client
 
 http_server: /src/lsquic/http_server
 	$(eval SSL_DIR=/src/equic/ssl)
-	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key
+	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key > $(LOGS)/$(NOW)-$(LOG_SUFFIX).log
 
 http_client: /src/lsquic/http_client
 	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
