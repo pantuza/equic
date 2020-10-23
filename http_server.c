@@ -34,6 +34,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <inttypes.h>
+#include <time.h>
 
 #ifndef WIN32
 #include <netinet/in.h>
@@ -321,6 +322,8 @@ struct server_ctx {
     unsigned                     delay_resp_sec;
 
     equic_t                     *equic;
+    struct timespec              begin_t;
+    struct timespec              end_t;
 };
 
 struct lsquic_conn_ctx {
