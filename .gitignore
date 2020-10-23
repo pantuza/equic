@@ -58,3 +58,8 @@ bin/*
 
 # temporary commands reminder file
 .command-reminder
+
+# Logs files except gitkeep file
+logs/*
+!logs/.gitkeep
+
