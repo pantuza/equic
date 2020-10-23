@@ -361,6 +361,29 @@ debug_connection (const struct sockaddr *local, const struct sockaddr *peer, cha
 }
 
 
+/**
+ * Calculates elapsed miliseconds between two given times.
+ * Returns a value of type double
+ */
+static double
+elapsed_time_ms (struct timespec *begin, struct timespec *end)
+{
+    // First convert all times to nanoseconds
+    long begin_in_ns = begin->tv_sec * 1.0e9 + begin->tv_nsec;
+    long end_in_ns = end->tv_sec * 1.0e9 + end->tv_nsec;
+
+    // Calculate the elapsed time and convert to miliseconds
+    double elapsed_ms = (end_in_ns - begin_in_ns) / 1.0e6;
+
+    printf(
+       "[eQUIC] RequestDuration=%.3f, Begin=%.3ld, End=%.3ld\n",
+       elapsed_ms, begin_in_ns, end_in_ns
+    );
+
+    return elapsed_ms;
+}
+
+
 static lsquic_conn_ctx_t *
 http_server_on_new_conn (void *stream_if_ctx, lsquic_conn_t *conn)
 {
@@ -445,12 +468,7 @@ http_server_on_conn_closed (lsquic_conn_t *conn)
 
     /* Reads cpu time at connection end */
     clock_gettime(CLOCK_MONOTONIC, &conn_h->server_ctx->end_t);
-    double ms = (
-                    (conn_h->server_ctx->end_t.tv_sec * 1.0e9 + conn_h->server_ctx->end_t.tv_nsec)
-                 -
-                    (conn_h->server_ctx->begin_t.tv_sec * 1.0e9 + conn_h->server_ctx->begin_t.tv_nsec)
-                 ) / 1.0e6;
-    printf("[eQUIC] RequestDuration=%.3f, Begin=%.3ld, End=%.3ld\n", ms, conn_h->server_ctx->begin_t.tv_nsec, conn_h->server_ctx->end_t.tv_nsec);
+    elapsed_time_ms(&conn_h->server_ctx->begin_t, &conn_h->server_ctx->end_t);
 
     /* No provision is made to stop HTTP server */
     free(conn_h);
