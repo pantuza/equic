@@ -261,7 +261,7 @@ IF(LSQUIC_BIN)
 IF(MSVC)
     SET(GETOPT_C wincompat/getopt.c)
 ENDIF()
-add_executable(http_server bin/http_server.c bin/prog.c bin/test_common.c bin/test_cert.c ${GETOPT_C})
+add_executable(http_server /src/equic/bin/equic_user.o bin/http_server.c bin/prog.c bin/test_common.c bin/test_cert.c ${GETOPT_C})
 IF(NOT MSVC)   #   TODO: port MD5 server and client to Windows
 add_executable(md5_server bin/md5_server.c bin/prog.c bin/test_common.c bin/test_cert.c ${GETOPT_C})
 add_executable(md5_client bin/md5_client.c bin/prog.c bin/test_common.c bin/test_cert.c ${GETOPT_C})
@@ -298,7 +298,8 @@ LIST(APPEND LIBS ws2_32)
 ENDIF()
 
 TARGET_LINK_LIBRARIES(http_client ${LIBS})
-TARGET_LINK_LIBRARIES(http_server ${LIBS})
+# Links bpf library on the http_server implementation
+TARGET_LINK_LIBRARIES(http_server ${LIBS} bpf elf /usr/lib/x86_64-linux-gnu/libz.a)
 IF(NOT MSVC)
 TARGET_LINK_LIBRARIES(md5_server  ${LIBS})
 TARGET_LINK_LIBRARIES(md5_client  ${LIBS})
