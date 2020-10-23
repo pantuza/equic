@@ -276,7 +276,7 @@ main (int argc, char **argv)
     equic_get_interface(&equic, "eth0");
     equic_read_object(&equic, "/src/equic/bin/equic_kern.o");
 
-    signal(SIGINT, equic_sigint_callback); 
+    signal(SIGINT, equic_sigint_callback);
     signal(SIGTERM, equic_sigterm_callback);
 
     equic_load(&equic);
