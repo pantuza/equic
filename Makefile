@@ -43,6 +43,9 @@ IFACE ?= eth0
 # Current timestamp
 NOW := $(shell date +%s)
 
+# Load test request size
+REQ_SIZE ?= 64k
+
 #
 # Checks if trace file exist. If not, mount it
 #
@@ -202,4 +205,9 @@ http_server: /src/lsquic/http_server
 
 http_client: /src/lsquic/http_client
 	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
-	$< -H localhost -s $(SRV_ADDR):12345 -p /1024K
+	$< -H localhost -s $(SRV_ADDR):12345 -p /$(REQ_SIZE)
+
+load_test: $(DOCKERFILES_DIR)/docker-compose-load-clients.yaml
+	$(info Running eQUIC load test..)
+	REQ_SIZE=$(REQ_SIZE) $(DOCKER_COMPOSE_CMD) --file $< up
+	$(DOCKER_COMPOSE_CMD) --file $< down
