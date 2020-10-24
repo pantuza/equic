@@ -21,18 +21,13 @@ services:
       memlock:
         soft: -1
         hard: -1
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
 
   client1:
     container_name: equic-client-1
-    image: equic:local
-    command: tail -f
-    volumes:
-      - ..:/src/equic
-    networks:
-      - equic
-
-  client2:
-    container_name: equic-client-2
     image: equic:local
     command: tail -f
     volumes:
