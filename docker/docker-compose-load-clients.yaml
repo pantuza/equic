@@ -13,7 +13,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: '0.2'
 
   client1:
     container_name: load1
@@ -26,7 +26,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: '0.2'
 
   client2:
     container_name: load2
@@ -39,7 +39,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: '0.2'
 
   client3:
     container_name: load3
@@ -52,7 +52,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: '0.2'
 
   client4:
     container_name: load4
@@ -65,7 +65,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: '0.2'
 
   client5:
     container_name: load5
@@ -78,7 +78,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: '0.2'
 
   client6:
     container_name: load6
@@ -91,7 +91,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: '0.2'
 
   client7:
     container_name: load7
@@ -104,7 +104,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: '0.2'
 
 networks:
   default:
