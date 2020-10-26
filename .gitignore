@@ -63,3 +63,10 @@ bin/*
 logs/*
 !logs/.gitkeep
 
+# Experiments should keep directories but not files
+experiments/in/*.dat
+experiments/stats/*.csv
+experiments/out/*.png
+!experiments/in/.gitkeep
+!experiments/stats/.gitkeep
+!experiments/out/.gitkeep
