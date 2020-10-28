@@ -35,6 +35,8 @@
 #include <sys/stat.h>
 #include <inttypes.h>
 #include <time.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #ifndef WIN32
 #include <netinet/in.h>
@@ -384,6 +386,33 @@ elapsed_time_ms (struct timespec *begin, struct timespec *end)
 }
 
 
+pthread_t tid;
+pthread_mutex_t lock;
+int requests_per_second;
+#define COUNTER_INTERVAL 5
+
+void *request_counter (void *arg)
+{
+    while (1) {
+
+        sleep(COUNTER_INTERVAL);
+        pthread_mutex_lock(&lock);
+            int n_reqs = (int) requests_per_second / COUNTER_INTERVAL;
+            printf("[eQUIC] RequestsPerSecond=%d\n", n_reqs);
+            requests_per_second = 0;
+        pthread_mutex_unlock(&lock);
+    }
+}
+
+void inc_request_counter ()
+{
+    pthread_mutex_lock(&lock);
+        requests_per_second += 1;
+    pthread_mutex_unlock(&lock);
+}
+
+
+
 static lsquic_conn_ctx_t *
 http_server_on_new_conn (void *stream_if_ctx, lsquic_conn_t *conn)
 {
@@ -409,6 +438,7 @@ http_server_on_new_conn (void *stream_if_ctx, lsquic_conn_t *conn)
      * Increment eQUIC Kernel counters Map key for the give peer (client)
      */
     equic_inc_counter(server_ctx->equic, peer);
+    inc_request_counter();
 
     return conn_h;
 }
@@ -1798,6 +1828,10 @@ main (int argc, char **argv)
     equic_load(&equic);
 
     server_ctx.equic = &equic;
+
+    requests_per_second = 0;
+    pthread_mutex_init(&lock, NULL);
+    pthread_create(&tid, NULL, &request_counter, NULL);
 
     prog_init(&prog, LSENG_SERVER|LSENG_HTTP, &server_ctx.sports,
                                             &http_server_if, &server_ctx);
