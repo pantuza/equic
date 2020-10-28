@@ -50,13 +50,20 @@ extract:
 
 compute:
 	$(info Summarizing statistics from data)
-	@$(PYTHON3) compute.py $(IN_DIR)/*-baseline-16k.dat
-	@$(PYTHON3) compute.py $(IN_DIR)/*-baseline-32k.dat
-	@$(PYTHON3) compute.py $(IN_DIR)/*-baseline-64k.dat
-	@$(PYTHON3) compute.py $(IN_DIR)/*-baseline-128k.dat
-	@$(PYTHON3) compute.py $(IN_DIR)/*-baseline-256k.dat
-	@$(PYTHON3) compute.py $(IN_DIR)/*-baseline-512k.dat
-	@$(PYTHON3) compute.py $(IN_DIR)/*-baseline-1024k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/duration-baseline-16k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/duration-baseline-32k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/duration-baseline-64k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/duration-baseline-128k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/duration-baseline-256k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/duration-baseline-512k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/duration-baseline-1024k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-16k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-32k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-64k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-128k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-256k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-512k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-1024k.dat
 
 
 plot:
