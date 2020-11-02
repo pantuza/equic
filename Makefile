@@ -211,3 +211,8 @@ load_test: $(DOCKERFILES_DIR)/docker-compose-load-clients.yaml
 	$(info Running eQUIC load test..)
 	REQ_SIZE=$(REQ_SIZE) $(DOCKER_COMPOSE_CMD) --file $< up
 	$(DOCKER_COMPOSE_CMD) --file $< down
+
+parallel_load_test: $(DOCKERFILES_DIR)/docker-compose-parallel-load-clients.yaml
+	$(info Running eQUIC parallel load test..)
+	REQ_SIZE=$(REQ_SIZE) $(DOCKER_COMPOSE_CMD) --file $< up
+	$(DOCKER_COMPOSE_CMD) --file $< down
