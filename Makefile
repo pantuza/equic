@@ -147,7 +147,7 @@ compile: greetings kernel userspace
 
 kernel: $(SRC)/equic_kern.c
 	$(info Compiling eBPF kernel program)
-	$(CC) -target bpf -c $< -o $(BIN)/equic_kern.o $(CFLAGS)
+	$(CC) -target bpf -c $< -o $(BIN)/equic_kern.o -I $(INCLUDE_PATH) $(CFLAGS)
 
 userspace: library
 	$(info Compiling eQUIC userspace program standalone program)
