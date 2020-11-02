@@ -19,6 +19,9 @@ OPTMIZATIONS := -O2
 CFLAGS := -DDEBUG -D__BPF_TRACING__ -D__KERNEL__
 CFLAGS += $(OPTMIZATIONS)
 
+# Headers include path for Kernel module
+INCLUDE_PATH := /usr/include/x86_64-linux-gnu/
+
 # C lang compiler
 CC := $(shell which clang)
 
@@ -31,8 +34,9 @@ BIN := bin
 # Logs directory
 LOGS := logs
 
-# Log suffix used to name files
+# Log suffixes used to name files
 LOG_SUFFIX ?= baseline
+KERNEL_LOG_SUFFIX ?= kernel
 
 # Kernel trace file which eBPF prints debug messages
 TRACE_PIPE := /sys/kernel/debug/tracing/trace_pipe
@@ -73,7 +77,6 @@ help: greetings
 	@echo " stop                Stops docker compose"
 	@echo " restart             Restarts docker containers"
 	@echo " client1_shell       Runs a shell on the client 1 container"
-	@echo " client2_shell       Runs a shell on the client 2 container"
 	@echo " server_shell        Runs a shell on the server container"
 	@echo " logs                Tails the server application logs"
 	@echo
@@ -130,9 +133,6 @@ restart: stop start
 client1_shell:
 	@docker exec -it equic-client-1 bash
 
-client2_shell:
-	@docker exec -it equic-client-2 bash
-
 server_shell:
 	@docker exec -it equic-server bash
 
@@ -182,7 +182,7 @@ unload:
 debug:
 	$(info Entering debug mode)
 	$(call check_debugfs)
-	@cat $(TRACE_PIPE)
+	@cat $(TRACE_PIPE) | tee $(LOGS)/$(shell date +%s)-$(KERNEL_LOG_SUFFIX).log
 
 show:
 	@ip link show dev $(IFACE)
