@@ -1,0 +1,78 @@
+version: "3"
+
+services:
+
+  client0:
+    container_name: load0
+    image: equic:local
+    command: /src/equic/docker/load-test-entrypoint.sh
+    environment:
+      - REQ_SIZE=$REQ_SIZE
+      - PARALLEL=1
+    volumes:
+      - ..:/src/equic
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+
+  client1:
+    container_name: load1
+    image: equic:local
+    command: /src/equic/docker/load-test-entrypoint.sh
+    environment:
+      - REQ_SIZE=$REQ_SIZE
+      - PARALLEL=1
+    volumes:
+      - ..:/src/equic
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+
+  client2:
+    container_name: load2
+    image: equic:local
+    command: /src/equic/docker/load-test-entrypoint.sh
+    environment:
+      - REQ_SIZE=$REQ_SIZE
+      - PARALLEL=1
+    volumes:
+      - ..:/src/equic
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+
+  client3:
+    container_name: load3
+    image: equic:local
+    command: /src/equic/docker/load-test-entrypoint.sh
+    environment:
+      - REQ_SIZE=$REQ_SIZE
+      - PARALLEL=1
+    volumes:
+      - ..:/src/equic
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+
+  client4:
+    container_name: load4
+    image: equic:local
+    command: /src/equic/docker/load-test-entrypoint.sh
+    environment:
+      - REQ_SIZE=$REQ_SIZE
+      - PARALLEL=1
+    volumes:
+      - ..:/src/equic
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+
+networks:
+  default:
+    external:
+      name: docker_equic
