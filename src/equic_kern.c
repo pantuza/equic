@@ -40,6 +40,8 @@ struct bpf_map_def SEC("maps") counters = {
 SEC("equic")
 int udp_quota (struct xdp_md *ctx)
 {
+    __u64 begin_in_ns = bpf_ktime_get_ns();
+
     __be32 key;
     int value = 0;
 
@@ -72,7 +74,7 @@ int udp_quota (struct xdp_md *ctx)
         int *curr_value = bpf_map_lookup_elem(&counters, &key);
         if(!curr_value) {
 #ifdef DEBUG
-        bpf_printk("[XDP] UDP=true, Action=Pass, Status=LookupMiss Key=%d\n", key);
+        bpf_printk("[XDP] UDP=true, Action=Pass, Status=LookupMiss, Key=%d\n", key);
 #endif
 
             return XDP_PASS;
@@ -84,13 +86,23 @@ int udp_quota (struct xdp_md *ctx)
          */
         if (*curr_value >= QUIC_QUOTA_LIMIT) {
 #ifdef DEBUG
-            bpf_printk("[XDP] Action=Drop QuotaExceeded=%llu\n", *curr_value);
+            bpf_printk("[XDP] Action=Drop, QuotaExceeded=%llu\n", *curr_value);
 #endif
+            __u64 end_in_ns = bpf_ktime_get_ns();
+            // struct timespec end_time;
+            // clock_gettime(CLOCK_MONOTONIC, &end_time);
+            // long begin_in_ns = begin_time.tv_sec * 1.0e9 + begin_time.tv_nsec;
+            // long end_in_ns = end_time.tv_sec * 1.0e9 + end_time.tv_nsec;
+            __u64 elapsed_us = (end_in_ns - begin_in_ns) / 1000;
+            bpf_printk(
+               "[XDP] BlockDuration=%llu, Begin=%llu, End=%llu\n",
+               elapsed_us, begin_in_ns, end_in_ns
+            );
             return XDP_DROP;
         }
 
 #ifdef DEBUG
-        bpf_printk("[XDP] Action=Pass, UDP=true, Status=LookupHit Key=%d\n", key);
+        bpf_printk("[XDP] Action=Pass, UDP=true, Status=LookupHit, Key=%d\n", key);
 #endif
         return XDP_PASS;
     }
