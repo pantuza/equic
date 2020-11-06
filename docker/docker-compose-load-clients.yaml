@@ -106,6 +106,34 @@ services:
         limits:
           cpus: '0.2'
 
+  client8:
+    container_name: load8
+    image: equic:local
+    command: /src/equic/docker/load-test-entrypoint.sh
+    environment:
+      - REQ_SIZE=$REQ_SIZE
+      - PARALLEL=1
+    volumes:
+      - ..:/src/equic
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+
+  client9:
+    container_name: load9
+    image: equic:local
+    command: /src/equic/docker/load-test-entrypoint.sh
+    environment:
+      - REQ_SIZE=$REQ_SIZE
+      - PARALLEL=1
+    volumes:
+      - ..:/src/equic
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+
 networks:
   default:
     external:
