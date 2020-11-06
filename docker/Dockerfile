@@ -8,7 +8,8 @@ RUN apt-get update && \
                        software-properties-common \
                        zlib1g-dev libevent-dev golang \
                        llvm vim libelf-dev iputils-ping \
-                       clang netcat tcpdump dnsutils iproute2
+                       clang netcat tcpdump dnsutils iproute2 \
+                       libc6-dev-i386
 
 
 RUN mkdir /src
@@ -44,6 +45,7 @@ WORKDIR /src/equic
 
 # Needed to link asm/byteorder.h into eBPF
 RUN ln -s /usr/include/x86_64-linux-gnu/asm/ /usr/include/asm
+
 
 # Clone and build libbpf as staticlibrary
 RUN git submodule update --init && \
