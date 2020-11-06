@@ -46,6 +46,9 @@ extract:
 	@$(PYTHON3) extract.py $(LOGS_DIR)/*-baseline-256k.log
 	@$(PYTHON3) extract.py $(LOGS_DIR)/*-baseline-512k.log
 	@$(PYTHON3) extract.py $(LOGS_DIR)/*-baseline-1024k.log
+	@$(PYTHON3) extract.py $(LOGS_DIR)/*-parallel_cpu_userspace-256k.log
+	@$(PYTHON3) extract.py $(LOGS_DIR)/*-parallel_cpu_kernel-256k.log
+	
 
 
 compute:
@@ -64,6 +67,8 @@ compute:
 	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-256k.dat
 	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-512k.dat
 	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-1024k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/block_duration-parallel_cpu_kernel-256k.dat
+	@$(PYTHON3) compute.py $(IN_DIR)/block_duration-parallel_cpu_userspace-256k.dat
 
 
 plot:
@@ -74,6 +79,8 @@ plot:
 show:
 	$(info Showing results graphs)
 	qlmanage -p $(OUT_DIR)/duration.png
+	qlmanage -p $(OUT_DIR)/requests.png
+	qlmanage -p $(OUT_DIR)/block-duration.png
 
 
 clean:
