@@ -525,13 +525,25 @@ http_server_on_new_conn (void *stream_if_ctx, lsquic_conn_t *conn)
     const struct sockaddr *peer;
     lsquic_conn_get_sockaddr(conn, &local, &peer);
 
+    // if (reached_quota_limit(peer)) {
+    //     lsquic_conn_close(conn);
+
+    //     struct timespec quota_end_time;
+    //     clock_gettime(CLOCK_MONOTONIC, &quota_end_time);
+    //     calculate_quota_block_time(&server_ctx->begin_t, &quota_end_time);
+
+    //     return conn_h;
+    // }
+    // inc_quota(peer);
+
+    inc_request_counter();
+
     debug_connection(local, peer, "ConnectionSetup");
 
     /*
      * Increment eQUIC Kernel counters Map key for the give peer (client)
      */
     equic_inc_counter(server_ctx->equic, peer);
-    inc_request_counter();
 
     return conn_h;
 }
@@ -549,11 +561,6 @@ http_server_on_goaway (lsquic_conn_t *conn)
 static void
 http_server_on_conn_closed (lsquic_conn_t *conn)
 {
-    /* Read sockaddr from connection for client and server */
-    const struct sockaddr *local;
-    const struct sockaddr *peer;
-    lsquic_conn_get_sockaddr(conn, &local, &peer);
-
     static int stopped;
     lsquic_conn_ctx_t *conn_h = lsquic_conn_get_ctx(conn);
     LSQ_INFO("Connection closed");
@@ -582,12 +589,19 @@ http_server_on_conn_closed (lsquic_conn_t *conn)
         }
     }
 
+    /* Read sockaddr from connection for client and server */
+    const struct sockaddr *local;
+    const struct sockaddr *peer;
+    lsquic_conn_get_sockaddr(conn, &local, &peer);
+
     debug_connection(local, peer, "ConnectionClose");
 
     /*
      * Decrement eQUIC Kernel counters Map key for the give peer (client)
      */
     equic_dec_counter(conn_h->server_ctx->equic, peer);
+
+    // dec_quota(peer);
 
     /* Reads cpu time at connection end */
     clock_gettime(CLOCK_MONOTONIC, &conn_h->server_ctx->end_t);
