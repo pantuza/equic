@@ -29,6 +29,17 @@ def compute_avg_reqs_per_second(dat):
 
     return harmonic_mean(reqs)
 
+def compute_avg_block_duration(dat):
+
+    durations = []
+
+    with open(dat) as ifile:
+
+        for duration in ifile:
+            durations.append(float(duration))
+
+    return harmonic_mean(durations)
+
 def compute(dat, meta):
 
     ofilename = OUT_DIR + meta["metric"] + "-" + meta["type"] + ".csv"
@@ -40,6 +51,9 @@ def compute(dat, meta):
 
     elif meta["metric"] == "reqs_per_second":
         avg_value = compute_avg_reqs_per_second(dat)
+
+    elif meta["metric"] == "block_duration":
+        avg_value = compute_avg_block_duration(dat)
 
     with open(ofilename, "a") as ofile:
         ofile.write("{0}, {1}\n".format(meta["size"], avg_value))
