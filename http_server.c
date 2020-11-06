@@ -412,6 +412,99 @@ void inc_request_counter ()
 }
 
 
+// Array with quota limits for a Type C local network address space
+// Keys are the last octet of a given IPv4 address
+int Quotas[256];
+
+// Mutex to control Quotas modifications
+pthread_mutex_t QuotasLock;
+
+// Upper bound limit for clients connection quota
+#define QUOTA_LIMIT 5
+
+int extract_last_octet(char *addr)
+{
+    char octet[4];
+    int index = 0;
+    size_t n = 0;
+
+    // Find the last octet start index
+    for (int i=strlen(addr); i > 0; i--) {
+
+        if (addr[i]  == '.') {
+            index = i + 1;
+            break;
+        }
+        n++;
+    }
+
+    strncpy(octet, addr + index, n);
+
+    return atoi(octet);
+}
+
+void inc_quota(const struct sockaddr *peer)
+{
+  struct sockaddr_in *client_addr_in = (struct sockaddr_in *)peer;
+  char *addr = inet_ntoa(client_addr_in->sin_addr);
+  int octet = extract_last_octet(addr);
+
+  pthread_mutex_lock(&QuotasLock);
+    Quotas[octet] += 1;
+    printf("[eQUIC] Action=Increment, Type=UserSpace, Key=%s, Value=%d\n", addr, Quotas[octet]);
+  pthread_mutex_unlock(&QuotasLock);
+}
+
+void dec_quota(const struct sockaddr *peer)
+{
+  struct sockaddr_in *client_addr_in = (struct sockaddr_in *)peer;
+  char *addr = inet_ntoa(client_addr_in->sin_addr);
+  int octet = extract_last_octet(addr);
+
+  pthread_mutex_lock(&QuotasLock);
+    if (Quotas[octet] > 0) {
+        Quotas[octet] -= 1;
+    }
+    printf("[eQUIC] Action=Decrement, Type=UserSpace, Key=%s, Value=%d\n", addr, Quotas[octet]);
+  pthread_mutex_unlock(&QuotasLock);
+
+}
+
+int reached_quota_limit(const struct sockaddr *peer)
+{
+  struct sockaddr_in *client_addr_in = (struct sockaddr_in *)peer;
+  char *addr = inet_ntoa(client_addr_in->sin_addr);
+  int octet = extract_last_octet(addr);
+
+  pthread_mutex_lock(&QuotasLock);
+    if (Quotas[octet] >= QUOTA_LIMIT) {
+      printf("[eQUIC] Action=Exceeded, Type=UserSpace, Key=%s, Value=%d\n", addr, Quotas[octet]);
+  pthread_mutex_unlock(&QuotasLock);
+
+      return 1;
+    }
+
+    printf("[eQUIC] Action=NotExceeded, Type=UserSpace, Key=%s, Value=%d\n", addr, Quotas[octet]);
+  pthread_mutex_unlock(&QuotasLock);
+
+  return 0;
+}
+
+void calculate_quota_block_time(struct timespec *begin, struct timespec *end)
+{
+    // First convert all times to nanoseconds
+    long begin_in_ns = begin->tv_sec * 1.0e9 + begin->tv_nsec;
+    long end_in_ns = end->tv_sec * 1.0e9 + end->tv_nsec;
+
+    // Calculate the elapsed time and convert to microseconds
+    double elapsed_us = (end_in_ns - begin_in_ns) / 1.0e3;
+
+    printf(
+       "[eQUIC] BlockDuration=%.3f, Begin=%.3ld, End=%.3ld\n",
+       elapsed_us, begin_in_ns, end_in_ns
+    );
+}
+
 
 static lsquic_conn_ctx_t *
 http_server_on_new_conn (void *stream_if_ctx, lsquic_conn_t *conn)
