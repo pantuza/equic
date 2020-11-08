@@ -15,7 +15,7 @@ echo "Load test will ask for responses with with ${REQ_SIZE}"
 HOSTNAME=$(hostname)
 
 # Time to wait before triggering parallel load
-SLEEP_TIME=3
+SLEEP_TIME=30
 
 #
 # Checks for parallel execution. Clients that triggers parallel
