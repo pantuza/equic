@@ -83,6 +83,9 @@ show:
 	qlmanage -p $(OUT_DIR)/duration.png
 	qlmanage -p $(OUT_DIR)/requests.png
 	qlmanage -p $(OUT_DIR)/block-duration.png
+	qlmanage -p $(OUT_DIR)/requests-per-second.png
+	qlmanage -p $(OUT_DIR)/cpu-cdf.png
+	qlmanage -p $(OUT_DIR)/mem-cdf.png
 
 
 clean:
