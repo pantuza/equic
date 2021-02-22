@@ -69,6 +69,8 @@ compute:
 	@$(PYTHON3) compute.py $(IN_DIR)/reqs_per_second-baseline-1024k.dat
 	@$(PYTHON3) compute.py $(IN_DIR)/block_duration-parallel_cpu_kernel-256k.dat
 	@$(PYTHON3) compute.py $(IN_DIR)/block_duration-parallel_cpu_userspace-256k.dat
+	@$(PYTHON3) cpu.py
+	@$(PYTHON3) mem.py
 
 
 plot:
