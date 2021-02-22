@@ -60,3 +60,43 @@ set xlabel "    "
 
 plot 'stats/block_duration-parallel_cpu_userspace.csv' using 2:xtic(1) linewidth 3 title "Espaço de usuário", \
      'stats/block_duration-parallel_cpu_kernel.csv' using 2:xtic(1) linewidth 3 title "Espaço de núcleo"
+
+
+#
+# Plots CPU data
+#
+reset
+set datafile separator ','
+
+set key left top
+set xlabel "Uso de CPU (%)"
+set ylabel "Proporção"
+set yrange [0:1]
+
+set terminal 'png' size 800,400
+set output "out/cpu-cdf.png"
+
+set title "Proporção de uso de CPU durante experimento" font ", 24"
+
+plot "stats/cpu-cdf-no-equic.csv" using 1:2 title "Sem eQUIC" linewidth 3 with linespoints, \
+     "stats/cpu-cdf-equic.csv" using 1:2 title "Com eQUIC" linewidth 3 with linespoints
+
+
+#
+# Plots Memory data
+#
+reset
+set datafile separator ','
+
+set key left top
+set xlabel "Uso de memória (%)"
+set ylabel "Proporção (CDF)"
+set yrange [0:1]
+
+set terminal 'png' size 800,400
+set output "out/mem-cdf.png"
+
+set title "Proporção de uso de Memória durante experimento" font ", 24"
+
+plot "stats/mem-cdf-no-equic.csv" using 1:2 title "Sem eQUIC" linewidth 3 with linespoints, \
+     "stats/mem-cdf-equic.csv" using 1:2 title "Com eQUIC" linewidth 3 with linespoints
