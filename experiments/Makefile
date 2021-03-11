@@ -93,7 +93,10 @@ show:
 	qlmanage -p $(OUT_DIR)/mem-cdf.png
 
 
+.PHONY: clean
 clean:
+	$(info === Clean experiments files ===)
 	@rm -rvf $(IN_DIR)/*.dat
 	@rm -rvf $(STATS_DIR)/*.csv
 	@rm -rvf $(OUT_DIR)/*.png
+	@echo
