@@ -29,6 +29,7 @@ help:
 	@echo
 	@echo "extract          Extracts data from log files"
 	@echo "compute          Compute and summarize data into statistics"
+	@echo "aggregate        Aggregate statistics into single files"
 	@echo "plot             Plots results using gnu plot"
 	@echo "show             Shows the graph results"
 	@echo "clean            Cleans experiments resulted files"
@@ -72,6 +73,10 @@ compute:
 	@$(PYTHON3) cpu.py
 	@$(PYTHON3) mem.py
 
+
+aggregate:
+	$(info Aggregating statistics)
+	@$(PYTHON3) aggregate.py
 
 plot:
 	$(info Plotting graphs from statistics)
