@@ -51,7 +51,39 @@ plot 'stats/block_duration-parallel_cpu_userspace.csv' using 2:xtic(1) linewidth
 #
 # Plots requests per second
 #
-set title "Tempo de bloqueio em micro segundos" font ", 24"
+set title "Variação na vazão de pacotes durante um ataque" font ", 24" offset screen 0,-0.03
+
+set style data lines
+set key spacing 1
+
+set ylabel "Requisições por segundo" offset 1,0
+set yrange [0:40]
+set xlabel "Número da coleta (1 unidade equivale a 5 segundos)"
+
+set terminal 'png' size 800,400
+set output 'out/requests-per-second.png'
+
+plot 'in/reqs_per_second-kernel-256k.dat' using 1 linewidth 3 title "Espaço de núcleo" smooth cspline, \
+     'in/reqs_per_second-userspace-256k.dat' using 1 linewidth 3 title "Espaço de usuário" smooth cspline
+
+
+
+#
+# Plots the requests per second curve
+#
+clear
+reset
+set terminal 'png' size 800,400
+set output 'out/requests.png'
+set datafile separator ","
+
+set key inside left top
+set key spacing 1
+set tmargin 5
+
+set grid y
+set multiplot layout 1,2
+
 
 set style data histogram
 set style fill solid
