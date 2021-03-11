@@ -19,7 +19,7 @@ OPTMIZATIONS := -O2
 CFLAGS := -DDEBUG -D__BPF_TRACING__ -D__KERNEL__
 CFLAGS += $(OPTMIZATIONS)
 
-# Headers include path for Kernel module
+# Headers include path for Kernel module inside the container
 INCLUDE_PATH := /usr/include/x86_64-linux-gnu/
 
 # C lang compiler
@@ -68,6 +68,7 @@ endef
 .DEFAULT_GOAL: help
 
 
+.PHONY: help
 help: greetings
 	@echo "eQUIC available target rules"
 	@echo
@@ -80,7 +81,7 @@ help: greetings
 	@echo " server_shell        Runs a shell on the server container"
 	@echo " logs                Tails the server application logs"
 	@echo
-	@echo "-- Inside the Container --"
+	@echo "-- Inside Container --"
 	@echo " compile             Compiles the eQUIC for kernel and userspace"
 	@echo " kernel              Compiles the eBPF program for kernel"
 	@echo " userspace           Compiles the eQUIC user space program"
@@ -102,6 +103,7 @@ help: greetings
 	@echo
 
 
+.PHONY: greetings
 greetings:
 	@echo "        ___  _   _ ___ ____ "
 	@echo "   ___ / _ \| | | |_ _/ ___|"
@@ -112,30 +114,39 @@ greetings:
 
 
 # Builds docker images locally
+.PHONY: build
 build: greetings $(DOCKERFILES_DIR)/Dockerfile
 	$(info Building eQUIC docker image..)
 	@$(DOCKER_CMD) build --tag equic:$(DOCKER_TAG) --file $(word 2, $^) --no-cache --memory=8g --cpuset-cpus=0,1,2,3 .
 
 
+.PHONY: start
 start: $(DOCKERFILES_DIR)/docker-compose.yaml
 	$(info Running eQUIC client and server..)
 	@$(DOCKER_COMPOSE_CMD) --file $< up --detach
 
 
+.PHONY: stop
 stop: $(DOCKERFILES_DIR)/docker-compose.yaml
 	$(info Stopping eQUIC client and server..)
 	@$(DOCKER_COMPOSE_CMD) --file $< down --remove-orphans
 
 
+.PHONY: restart
 restart: stop start
 
 
+.PHONY: client1_shell
 client1_shell:
-	@docker exec -it equic-client-1 bash
+	@docker exec -it client0 bash
 
+
+.PHONY: server_shell
 server_shell:
 	@docker exec -it equic-server bash
 
+
+.PHONY: logs
 logs:
 	@$(DOCKER_CMD) logs --tail 100 --follow equic-server
 
@@ -143,80 +154,121 @@ logs:
 #
 # Targets to run XDP related tasks
 #
+.PHONY: compile
 compile: greetings kernel userspace
 
+
+.PHONY: kernel
 kernel: $(SRC)/equic_kern.c
 	$(info Compiling eBPF kernel program)
 	$(CC) -target bpf -c $< -o $(BIN)/equic_kern.o -I $(INCLUDE_PATH) $(CFLAGS)
 
+
+.PHONY: userspace
 userspace: library
 	$(info Compiling eQUIC userspace program standalone program)
 	$(CC) $(SRC)/equic.c $(BIN)/equic_user.o -O2 -lbpf -lelf -lz -o $(BIN)/equic
 
+
+.PHONY: library
 library: $(SRC)/equic_user.c
 	$(info Compiling eQUIC userspace as static library)
 	gcc -c $< -fPIE -O2 -o $(BIN)/equic_user.o
 
+
+.PHONY: echo
 echo:
 	$(info Compiling lsquic echo server with eQUIC offload)
 	@cd /src/lsquic && make echo_server
 
+
+.PHONY: http
 http:
 	$(info Compiling lsquic HTTP server with eQUIC offload)
 	@cd /src/lsquic && make http_server
 
+
+.PHONY: clean
 clean:
 	@rm -rvf $(BIN)/equic $(wildcard $(BIN)/*.o)
 
+
+.PHONY: clean_logs
 clean_logs:
 	@rm -rvf $(LOGS)/*.log
 
+
+.PHONY: load
 load:
 	$(info Loading eBPF program on interface $(IFACE))
 	ip link set dev $(IFACE) xdp obj $(BIN)/equic_kern.o sec equic
 
+
+.PHONY: unload
 unload:
 	$(info Unloading eBPF program from interface $(IFACE))
 	ip link set dev $(IFACE) xdp off
 
+
+.PHONY: debug
 debug:
 	$(info Entering debug mode)
 	$(call check_debugfs)
 	@cat $(TRACE_PIPE) | tee $(LOGS)/$(shell date +%s)-$(KERNEL_LOG_SUFFIX).log
 
+
+.PHONY: show
 show:
 	@ip link show dev $(IFACE)
 
+
+.PHONY: bpf_dev
 bpf_dev: greetings unload compile load debug
 
+
+.PHONY: bpf
 bpf: greetings unload compile load
 
+
+.PHONY: run_server
 run_server: /src/lsquic/echo_server
 	$(eval SSL_DIR=/src/equic/ssl)
 	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key
 
+
+.PHONY: run_client
 run_client: /src/lsquic/echo_client
 	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
 	$< -H localhost -s $(SRV_ADDR):12345
 
+
+.PHONY: http_server
 http_server: /src/lsquic/http_server
 	$(eval SSL_DIR=/src/equic/ssl)
 	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key > $(LOGS)/$(NOW)-$(LOG_SUFFIX).log
 
+
+.PHONY: http_client
 http_client: /src/lsquic/http_client
 	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
 	$< -H localhost -s $(SRV_ADDR):12345 -p /$(REQ_SIZE)
 
+
+.PHONY: load_test
 load_test: $(DOCKERFILES_DIR)/docker-compose-load-clients.yaml
 	$(info Running eQUIC load test..)
 	REQ_SIZE=$(REQ_SIZE) $(DOCKER_COMPOSE_CMD) --file $< up
 	$(DOCKER_COMPOSE_CMD) --file $< down
 
+
+.PHONY: parallel_load_test
 parallel_load_test: $(DOCKERFILES_DIR)/docker-compose-parallel-load-clients.yaml
 	$(info Running eQUIC parallel load test..)
 	REQ_SIZE=$(REQ_SIZE) $(DOCKER_COMPOSE_CMD) --file $< up
 	$(DOCKER_COMPOSE_CMD) --file $< down
 
+
+.PHONY: stop_load_test
 stop_load_test:
 	$(info Stopping eQUIC load test..)
 	$(DOCKER_COMPOSE_CMD) --file $(DOCKERFILES_DIR)/docker-compose-load-clients.yaml down
