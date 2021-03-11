@@ -43,7 +43,8 @@ set xlabel "Tamanho do corpo da resposta"
 set terminal 'png' size 800,600
 set output 'out/block-duration.png'
 
-plot 'stats/reqs_per_second-baseline.csv' using 2:xtic(1) linewidth 3 title "baseline"
+plot 'stats/block_duration-parallel_cpu_userspace.csv' using 2:xtic(1) linewidth 3 title "Espaço de usuário", \
+     'stats/block_duration-parallel_cpu_kernel.csv' using 2:xtic(1) linewidth 3 title "Espaço de núcleo"
 
 
 
@@ -61,8 +62,31 @@ set yrange [0:25]
 set xlabel "    "
 
 
-plot 'stats/block_duration-parallel_cpu_userspace.csv' using 2:xtic(1) linewidth 3 title "Espaço de usuário", \
-     'stats/block_duration-parallel_cpu_kernel.csv' using 2:xtic(1) linewidth 3 title "Espaço de núcleo"
+plot 'stats/reqs_per_second-userspace.csv' using 2:xtic("Vazão Média") title "Espaço de usuário", \
+     'stats/reqs_per_second-kernel.csv' using 2:xtic("Vazão Média") title "Espaço de núcleo"
+
+
+set style data histogram
+set style fill solid
+set boxwidth 1
+
+unset ylabel
+unset yrange
+set format y "    "
+set y2label "Tempo (us)" offset 1.5,0
+set y2range [0:12]
+set y2tics
+
+set xlabel "Tamanho do corpo da resposta (256k)" offset screen -0.25,0
+set title "Vazão média de requisições e tempo médio\n de bloqueio por contexto" font ", 24" offset screen -0.25,-0.05
+
+plot 'stats/block_duration-parallel_cpu_userspace.csv' using 2:xtic("Bloqueio"), \
+     'stats/block_duration-parallel_cpu_kernel.csv' using 2:xtic("Bloqueio")
+
+unset multiplot
+
+
+
 
 
 #
