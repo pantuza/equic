@@ -21,7 +21,9 @@ set xlabel "Tamanho do corpo da resposta"
 set terminal 'png' size 800,500
 set output 'out/duration.png'
 
-plot 'stats/duration-baseline.csv' using 2:xtic(1) title "baseline"
+plot 'stats/duration-userspace.csv' using 2:xtic(1) title "Espaço de usuário", \
+     'stats/duration-kernel.csv' using 2:xtic(1) title "Espaço de núcleo", \
+     'stats/duration-baseline.csv' using 2:xtic(1) title "Sem controle de quota"
 
 
 
