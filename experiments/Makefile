@@ -86,11 +86,17 @@ plot:
 show:
 	$(info === Showing results graphs ===)
 	qlmanage -p $(OUT_DIR)/duration.png
+	qlmanage -p $(OUT_DIR)/duration-en.png
 	qlmanage -p $(OUT_DIR)/requests.png
+	qlmanage -p $(OUT_DIR)/requests-en.png
 	qlmanage -p $(OUT_DIR)/block-duration.png
+	qlmanage -p $(OUT_DIR)/block-duration-en.png
 	qlmanage -p $(OUT_DIR)/requests-per-second.png
+	qlmanage -p $(OUT_DIR)/requests-per-second-en.png
 	qlmanage -p $(OUT_DIR)/cpu-cdf.png
+	qlmanage -p $(OUT_DIR)/cpu-cdf-en.png
 	qlmanage -p $(OUT_DIR)/mem-cdf.png
+	qlmanage -p $(OUT_DIR)/mem-cdf-en.png
 
 
 .PHONY: clean
