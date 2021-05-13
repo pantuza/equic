@@ -108,9 +108,9 @@ set title "Throughput variation on a burst scenario" font ", 24" offset screen 0
 set style data lines
 set key spacing 1
 
-set ylabel "Requests per second" offset 1,0
+set ylabel "Requests per second" font ", 16" offset 1,0
 set yrange [0:40]
-set xlabel "Sample number (1 unit means 5 seconds)"
+set xlabel "Sample number (1 unit means 5 seconds)" font ", 16"
 
 set terminal 'png' size 800,400
 set output 'out/requests-per-second-en.png'
@@ -187,7 +187,7 @@ set style data histogram
 set style fill solid
 set boxwidth 1
 
-set ylabel "Requests per second"
+set ylabel "Requests per second" font ", 16"
 set yrange [0:25]
 set xlabel "    "
 
@@ -243,8 +243,8 @@ set datafile separator ','
 
 set grid
 set key right bottom
-set xlabel "CPU Usage (%)"
-set ylabel "Proportion (CDF)"
+set xlabel "CPU Usage (%)" font ", 16"
+set ylabel "Proportion (CDF)" font ", 16"
 set yrange [0:1]
 
 set terminal 'png' size 500,500
@@ -282,8 +282,8 @@ set datafile separator ','
 
 set grid
 set key right bottom
-set xlabel "Memory usage (%)"
-set ylabel "Proportion (CDF)"
+set xlabel "Memory usage (%)" font ", 16"
+set ylabel "Proportion (CDF)" font ", 16"
 set yrange [0:1]
 
 set terminal 'png' size 500,500
