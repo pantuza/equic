@@ -1,6 +1,6 @@
 # eQUIC
 
-QUIC protocol connection setup/teardown offload to eBPF + XDP
+QUIC protocol connection quota control offload to eBPF + XDP
 
 
 ### Dependencies
