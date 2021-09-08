@@ -192,8 +192,8 @@ set yrange [0:25]
 set xlabel "    "
 
 
-plot 'stats/reqs_per_second-userspace.csv' using 2:xtic("Vazão Média") title "User space", \
-     'stats/reqs_per_second-kernel.csv' using 2:xtic("Vazão Média") title "Kernel space"
+plot 'stats/reqs_per_second-userspace.csv' using 2:xtic("Average") title "User space", \
+     'stats/reqs_per_second-kernel.csv' using 2:xtic("throughput") title "Kernel space"
 
 
 set style data histogram
