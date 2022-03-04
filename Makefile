@@ -41,6 +41,9 @@ KERNEL_LOG_SUFFIX ?= kernel
 # Kernel trace file which eBPF prints debug messages
 TRACE_PIPE := /sys/kernel/debug/tracing/trace_pipe
 
+# Light Speed QUIC library path
+LSQUIC_PATH := /src/lsquic
+
 # Network interface to attach eBPF program
 IFACE ?= eth0
 
@@ -179,13 +182,13 @@ library: $(SRC)/equic_user.c
 .PHONY: echo
 echo:
 	$(info Compiling lsquic echo server with eQUIC offload)
-	@cd /src/lsquic && make echo_server
+	@cd $(LSQUIC_PATH) && make echo_server
 
 
 .PHONY: http
 http:
 	$(info Compiling lsquic HTTP server with eQUIC offload)
-	@cd /src/lsquic && make http_server
+	@cd $(LSQUIC_PATH) && make http_server
 
 
 .PHONY: clean
@@ -231,25 +234,25 @@ bpf: greetings unload compile load
 
 
 .PHONY: run_server
-run_server: /src/lsquic/echo_server
+run_server: $(LSQUIC_PATH)/bin/echo_server
 	$(eval SSL_DIR=/src/equic/ssl)
 	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key
 
 
 .PHONY: run_client
-run_client: /src/lsquic/echo_client
+run_client: $(LSQUIC_PATH)/bin/echo_client
 	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
 	$< -H localhost -s $(SRV_ADDR):12345
 
 
 .PHONY: http_server
-http_server: /src/lsquic/http_server
+http_server: $(LSQUIC_PATH)/bin/http_server
 	$(eval SSL_DIR=/src/equic/ssl)
 	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key > $(LOGS)/$(NOW)-$(LOG_SUFFIX).log
 
 
 .PHONY: http_client
-http_client: /src/lsquic/http_client
+http_client: $(LSQUIC_PATH)/bin/http_client
 	$(eval SRV_ADDR=$(shell host equic-server | awk '{print $$4}'))
 	$< -H localhost -s $(SRV_ADDR):12345 -p /$(REQ_SIZE)
 
