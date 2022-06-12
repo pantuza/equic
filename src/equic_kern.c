@@ -15,6 +15,10 @@
  */
 #define QUIC_QUOTA_LIMIT 5
 
+/**
+ * Maximum requests per second allowed from a given source IPv4 address
+ */
+#define QUIC_RATE_LIMIT 20
 
 
 /* Map that controls connections counter by source IP */
