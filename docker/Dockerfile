@@ -18,7 +18,6 @@ WORKDIR /src
 
 RUN git clone https://boringssl.googlesource.com/boringssl && \
     cd boringssl && \
-    git checkout 251b5169fd44345f455438312ec4e18ae07fd58c && \
     cmake . && \
     make
 
