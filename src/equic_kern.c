@@ -36,6 +36,20 @@ struct bpf_map_def SEC("maps") counters = {
 };
 
 
+/* Map that controls requests rate limit by source IP */
+struct bpf_map_def SEC("maps") rate_limit_map = {
+
+    .type = BPF_MAP_TYPE_HASH,
+
+    /* A 32 bits representing the source IPv4 address */
+    .key_size = sizeof(__be32),
+
+    /* A integer counter of the requests */
+    .value_size = sizeof(int),
+
+    .max_entries = 1024,
+};
+
 
 /**
  * eQUIC XDP hook that verifies if a given source IPv4 address
