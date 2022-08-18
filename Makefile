@@ -141,8 +141,8 @@ stop: $(DOCKERFILES_DIR)/docker-compose.yaml
 restart: stop start
 
 
-.PHONY: client1_shell
-client1_shell:
+.PHONY: client_shell
+client_shell:
 	@docker exec -it client0 bash
 
 
