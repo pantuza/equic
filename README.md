@@ -36,10 +36,8 @@ check all target rules available to be runned from inside a container.
 ```bash
 # Get a shell on the server
 $> make server_shell
-# Get a shell on the client 1
-$> make client1_shell
-# Get a shell on the client 2
-$> make client2_shell
+# Get a shell on the client
+$> make client_shell
 ```
 
 From inside the server container, compile the eQUIC library and kernel module.
@@ -77,3 +75,42 @@ Then you can type anything and once you hit Return, the packet will be sent
 to the server and ECHOED back to you using QUIC protocol. Also, if you reach
 the Quota limit defined inside the eQUIC library your packets are going to be
 droped directly on the kernel.
+
+
+### Running HTTP client and server
+
+On the server container run:
+
+```bash
+$> make http  # compiles http code
+$> make http_server  # Runs the web server
+```
+
+On client container run:
+
+```bash
+$> make http_client # Runs the client application that triggers requests to server
+```
+
+
+### Running experiments
+
+Make sure you have the http server running inside the server container:
+
+```bash
+$> make http_server
+```
+
+On the host machine run:
+
+```bash
+$> make load_test REQ_SIZE=4k
+```
+
+It will spam clients sending requests to the server.
+If you want to run experiments in parallel, do as follows:
+
+```bash
+make parallel_load_test REQ_SIZE=1k
+```
+It will also spam clients sending requests to the server, but now in parallel
