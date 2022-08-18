@@ -1,4 +1,3 @@
-
 #
 # Variables block
 #
@@ -80,9 +79,12 @@ help: greetings
 	@echo " start               Starts docker compose"
 	@echo " stop                Stops docker compose"
 	@echo " restart             Restarts docker containers"
-	@echo " client1_shell       Runs a shell on the client 1 container"
+	@echo " client_shell        Runs a shell on the client 1 container"
 	@echo " server_shell        Runs a shell on the server container"
 	@echo " logs                Tails the server application logs"
+	@echo " load_test           Runs load test experiment spamming clients"
+	@echo " parallel_load_test  Runs load test experiment spamming clients in parallel"
+	@echo " stop_load_test      Stops load test experiment"
 	@echo
 	@echo "-- Inside Container --"
 	@echo " compile             Compiles the eQUIC for kernel and userspace"
