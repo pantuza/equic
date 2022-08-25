@@ -9,7 +9,7 @@ RUN apt-get update && \
                        zlib1g-dev libevent-dev golang \
                        llvm vim libelf-dev iputils-ping \
                        clang netcat tcpdump dnsutils iproute2 \
-                       libc6-dev-i386
+                       libc6-dev-i386 bpftrace
 
 
 RUN mkdir /src
