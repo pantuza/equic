@@ -114,3 +114,5 @@ If you want to run experiments in parallel, do as follows:
 make parallel_load_test REQ_SIZE=1k
 ```
 It will also spam clients sending requests to the server, but now in parallel
+
+> Other experiments can be executed following [experiments/README.md](experiments/README.md)
