@@ -5,7 +5,6 @@ services:
   server:
     container_name: equic-server
     image: equic:local
-    command: tail -f
     volumes:
       - ..:/src/equic
       - ../CMakeLists.txt:/src/lsquic/CMakeLists.txt
