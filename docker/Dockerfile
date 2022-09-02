@@ -57,3 +57,5 @@ RUN git clone --depth 1 git://git.kernel.org/pub/scm/linux/kernel/git/stable/lin
     # Overrides all bpf headers with the latest ones from linux kernel source
     cp linux/include/uapi/linux/bpf* /usr/include/linux/
     # TODO: Remove linux folder after copying bpf files to release space
+
+CMD /src/equic/docker/entrypoint.sh
