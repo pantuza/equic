@@ -122,7 +122,7 @@ greetings:
 .PHONY: build
 build: greetings $(DOCKERFILES_DIR)/Dockerfile
 	$(info Building eQUIC docker image..)
-	@$(DOCKER_CMD) build --tag equic:$(DOCKER_TAG) --file $(word 2, $^) --no-cache --memory=8g --cpuset-cpus=0,1,2,3 .
+	@$(DOCKER_CMD) build --tag equic:$(DOCKER_TAG) --file $(word 2, $^) --memory=8g --cpuset-cpus=0,1,2,3 .
 
 
 .PHONY: start
