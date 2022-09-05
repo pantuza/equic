@@ -7,7 +7,7 @@ services:
     image: equic:local
     volumes:
       - ..:/src/equic
-      - ../CMakeLists.txt:/src/lsquic/CMakeLists.txt
+      - ../CMakeLists.txt:/src/lsquic/bin/CMakeLists.txt
       - ../echo_server.c:/src/lsquic/bin/echo_server.c
       - ../http_server.c:/src/lsquic/bin/http_server.c
     cap_add: # Necessary to modify network interface
