@@ -1,9 +1,10 @@
-/* Copyright (c) 2017 - 2020 LiteSpeed Technologies Inc.  See LICENSE. */
+/* Copyright (c) 2017 - 2022 LiteSpeed Technologies Inc.  See LICENSE. */
 /*
  * http_server.c -- A simple HTTP/QUIC server
  *
  * It serves up files from the filesystem.
  */
+
 
 
 
@@ -16,6 +17,7 @@
  * connection teardown this program updates a eBPF kernel Map.
  *
  * Take a look at the code in the following functions:
+ *   . struct server_ctx
  *   . debug_connection
  *   . echo_server_on_new_conn
  *   . echo_server_on_conn_closed
@@ -24,19 +26,16 @@
  * Author: Gustavo Pantuza <gustavopantuza@gmail.com>
  */
 
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
 #include <sys/queue.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <inttypes.h>
-#include <time.h>
-#include <pthread.h>
-#include <unistd.h>
 
 #ifndef WIN32
 #include <netinet/in.h>
@@ -52,9 +51,11 @@
 #include <openssl/md5.h>
 
 #include "lsquic.h"
+#include "../src/liblsquic/lsquic_hash.h"
 #include "lsxpack_header.h"
 #include "test_config.h"
 #include "test_common.h"
+#include "test_cert.h"
 #include "prog.h"
 
 #if HAVE_REGEX
@@ -69,6 +70,11 @@
 #include "../src/liblsquic/lsquic_int_types.h"
 #include "../src/liblsquic/lsquic_util.h"
 
+// eQUIC
+#include <signal.h>
+#include <time.h>
+#include <pthread.h>
+#include <unistd.h>
 #include "/src/equic/src/equic_user.h"
 
 #if HAVE_REGEX
@@ -303,6 +309,13 @@ static const size_t IDLE_SIZE = sizeof(on_being_idle) - 1;
  */
 static int s_immediate_write;
 
+/* Use preadv(2) in conjuction with lsquic_stream_pwritev() to reduce
+ * number of system calls required to read from disk.  The actual value
+ * specifies maximum write size.  A negative value indicates always to use
+ * the remaining file size.
+ */
+static ssize_t s_pwritev;
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define V(v) (v), strlen(v)
 
@@ -323,7 +336,9 @@ struct server_ctx {
     unsigned                     n_current_conns;
     unsigned                     delay_resp_sec;
 
+    // eQUIC
     equic_t                     *equic;
+    unsigned int                 has_eBPF;
     struct timespec              begin_t;
     struct timespec              end_t;
 };
@@ -336,6 +351,7 @@ struct lsquic_conn_ctx {
     }                    flags;
 };
 
+// ----------------- USER SPACE CONNECTION QUOTA IMPLEMENTATION ---------------
 
 /**
  * Prints a 4-tuple with Source IPv4 address and port and Destination
@@ -422,6 +438,9 @@ pthread_mutex_t QuotasLock;
 // Upper bound limit for clients connection quota
 #define QUOTA_LIMIT 5
 
+// Upper bound limit for rate limiting clients
+#define RATE_LIMIT 20
+
 int extract_last_octet(char *addr)
 {
     char octet[4];
@@ -504,15 +523,17 @@ void calculate_quota_block_time(struct timespec *begin, struct timespec *end)
        elapsed_us, begin_in_ns, end_in_ns
     );
 }
+// ------------ END OF USER SPACE CONNECTION QUOTA IMPLEMENTATION -------------
 
 
 static lsquic_conn_ctx_t *
 http_server_on_new_conn (void *stream_if_ctx, lsquic_conn_t *conn)
 {
     struct server_ctx *server_ctx = stream_if_ctx;
+    const char *sni;
 
-    /* Reads cpu time at connection start */
-    clock_gettime(CLOCK_MONOTONIC, &server_ctx->begin_t);
+    sni = lsquic_conn_get_sni(conn);
+    LSQ_DEBUG("new connection, SNI: %s", sni ? sni : "<not set>");
 
     lsquic_conn_ctx_t *conn_h = malloc(sizeof(*conn_h));
     conn_h->conn = conn;
@@ -520,30 +541,34 @@ http_server_on_new_conn (void *stream_if_ctx, lsquic_conn_t *conn)
     server_ctx->conn_h = conn_h;
     ++server_ctx->n_current_conns;
 
+    // eQUIC
     /* Read sockaddr from connection for client and server */
     const struct sockaddr *local;
     const struct sockaddr *peer;
     lsquic_conn_get_sockaddr(conn, &local, &peer);
 
-    // if (reached_quota_limit(peer)) {
-    //     lsquic_conn_close(conn);
+    if(server_ctx->has_eBPF) {
+        /*
+         * Increment eQUIC Kernel counters Map key for the given peer (client)
+         */
+        equic_inc_counter(server_ctx->equic, peer);
 
-    //     struct timespec quota_end_time;
-    //     clock_gettime(CLOCK_MONOTONIC, &quota_end_time);
-    //     calculate_quota_block_time(&server_ctx->begin_t, &quota_end_time);
+    } else {
+        if (reached_quota_limit(peer)) {
+            lsquic_conn_close(conn);
 
-    //     return conn_h;
-    // }
-    // inc_quota(peer);
+            struct timespec quota_end_time;
+            clock_gettime(CLOCK_MONOTONIC, &quota_end_time);
+            calculate_quota_block_time(&server_ctx->begin_t, &quota_end_time);
+
+            return conn_h;
+        }
+
+        inc_quota(peer);
+    }
 
     inc_request_counter();
-
     debug_connection(local, peer, "ConnectionSetup");
-
-    /*
-     * Increment eQUIC Kernel counters Map key for the give peer (client)
-     */
-    equic_inc_counter(server_ctx->equic, peer);
 
     return conn_h;
 }
@@ -589,6 +614,7 @@ http_server_on_conn_closed (lsquic_conn_t *conn)
         }
     }
 
+    // eQUIC
     /* Read sockaddr from connection for client and server */
     const struct sockaddr *local;
     const struct sockaddr *peer;
@@ -596,18 +622,23 @@ http_server_on_conn_closed (lsquic_conn_t *conn)
 
     debug_connection(local, peer, "ConnectionClose");
 
-    /*
-     * Decrement eQUIC Kernel counters Map key for the give peer (client)
-     */
-    equic_dec_counter(conn_h->server_ctx->equic, peer);
+    if (conn_h->server_ctx->has_eBPF) {
+        /*
+         * Decrement eQUIC Kernel counters Map key for the give peer (client)
+         */
+        equic_dec_counter(conn_h->server_ctx->equic, peer);
 
-    // dec_quota(peer);
+    } else {
+        dec_quota(peer);
+    }
 
     /* Reads cpu time at connection end */
     clock_gettime(CLOCK_MONOTONIC, &conn_h->server_ctx->end_t);
     elapsed_time_ms(&conn_h->server_ctx->begin_t, &conn_h->server_ctx->end_t);
 
+
     /* No provision is made to stop HTTP server */
+    lsquic_conn_set_ctx(conn, NULL);
     free(conn_h);
 }
 
@@ -651,6 +682,11 @@ struct req
     enum {
         HAVE_XHDR   = 1 << 0,
     }            flags;
+    enum {
+        PH_AUTHORITY    = 1 << 0,
+        PH_METHOD       = 1 << 1,
+        PH_PATH         = 1 << 2,
+    }            pseudo_headers;
     char        *path;
     char        *method_str;
     char        *authority_str;
@@ -692,6 +728,7 @@ struct lsquic_stream_ctx {
         SH_HEADERS_READ = (1 << 2),
     }                    flags;
     struct lsquic_reader reader;
+    int                  file_fd;   /* Used by pwritev */
 
     /* Fields below are used by interop callbacks: */
     enum interop_handler {
@@ -716,6 +753,7 @@ struct lsquic_stream_ctx {
     }                    interop_u;
     struct event        *resume_resp;
     size_t               written;
+    size_t               file_size; /* Used by pwritev */
 };
 
 
@@ -803,18 +841,65 @@ resume_response (evutil_socket_t fd, short what, void *arg)
 }
 
 
+static size_t
+bytes_left (lsquic_stream_ctx_t *st_h)
+{
+    if (s_pwritev)
+        return st_h->file_size - st_h->written;
+    else
+        return test_reader_size(st_h->reader.lsqr_ctx);
+}
+
+
+static ssize_t
+my_preadv (void *user_data, const struct iovec *iov, int iovcnt)
+{
+#if HAVE_PREADV
+    lsquic_stream_ctx_t *const st_h = user_data;
+    ssize_t nread = preadv(st_h->file_fd, iov, iovcnt, st_h->written);
+    LSQ_DEBUG("%s: wrote %zd bytes", __func__, (size_t) nread);
+    return nread;
+#else
+    return -1;
+#endif
+}
+
+
+static size_t
+pwritev_fallback_read (void *lsqr_ctx, void *buf, size_t count)
+{
+    lsquic_stream_ctx_t *const st_h = lsqr_ctx;
+    struct iovec iov;
+    size_t ntoread;
+
+    ntoread = st_h->file_size - st_h->written;
+    if (ntoread > count)
+        count = ntoread;
+    iov.iov_base = buf;
+    iov.iov_len = count;
+    return my_preadv(lsqr_ctx, &iov, 1);
+}
+
+
+static size_t
+pwritev_fallback_size (void *lsqr_ctx)
+{
+    lsquic_stream_ctx_t *const st_h = lsqr_ctx;
+    return st_h->file_size - st_h->written;
+}
+
+
 static void
 http_server_on_write (lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
 {
     if (st_h->flags & SH_HEADERS_SENT)
     {
         ssize_t nw;
-        if (test_reader_size(st_h->reader.lsqr_ctx) > 0)
+        if (bytes_left(st_h) > 0)
         {
             if (st_h->server_ctx->delay_resp_sec
                     && !(st_h->flags & SH_DELAYED)
-                        && st_h->written > 10000000
-                            && test_reader_size(st_h->reader.lsqr_ctx) > 0)
+                        && st_h->written > 10000000)
             {
                 struct timeval delay = {
                                 .tv_sec = st_h->server_ctx->delay_resp_sec, };
@@ -832,7 +917,26 @@ http_server_on_write (lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                 else
                     LSQ_ERROR("cannot allocate event");
             }
-            nw = lsquic_stream_writef(stream, &st_h->reader);
+            if (s_pwritev)
+            {
+                size_t to_write = bytes_left(st_h);
+                if (s_pwritev > 0 && (size_t) s_pwritev < to_write)
+                    to_write = s_pwritev;
+                nw = lsquic_stream_pwritev(stream, my_preadv, st_h, to_write);
+                if (nw == 0)
+                {
+                    struct lsquic_reader reader = {
+                        .lsqr_read = pwritev_fallback_read,
+                        .lsqr_size = pwritev_fallback_size,
+                        .lsqr_ctx = st_h,
+                    };
+                    nw = lsquic_stream_writef(stream, &reader);
+                }
+            }
+            else
+            {
+                nw = lsquic_stream_writef(stream, &st_h->reader);
+            }
             if (nw < 0)
             {
                 struct lsquic_conn *conn = lsquic_stream_conn(stream);
@@ -848,7 +952,7 @@ http_server_on_write (lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                     exit(1);
                 }
             }
-            if (test_reader_size(st_h->reader.lsqr_ctx) > 0)
+            if (bytes_left(st_h) > 0)
             {
                 st_h->written += (size_t) nw;
                 lsquic_stream_wantwrite(stream, 1);
@@ -949,11 +1053,32 @@ parse_request (struct lsquic_stream *stream, lsquic_stream_ctx_t *st_h)
 static void
 process_request (struct lsquic_stream *stream, lsquic_stream_ctx_t *st_h)
 {
-    st_h->reader.lsqr_read = test_reader_read;
-    st_h->reader.lsqr_size = test_reader_size;
-    st_h->reader.lsqr_ctx = create_lsquic_reader_ctx(st_h->req_path);
-    if (!st_h->reader.lsqr_ctx)
-        exit(1);
+    struct stat st;
+
+    if (s_pwritev)
+    {
+        st_h->file_fd = open(st_h->req_path, O_RDONLY);
+        if (st_h->file_fd < 0)
+        {
+            LSQ_ERROR("cannot open %s for reading: %s", st_h->req_path,
+                                                            strerror(errno));
+            exit(1);
+        }
+        if (fstat(st_h->file_fd, &st) < 0)
+        {
+            LSQ_ERROR("fstat: %s", strerror(errno));
+            exit(1);
+        }
+        st_h->file_size = st.st_size;
+    }
+    else
+    {
+        st_h->reader.lsqr_read = test_reader_read;
+        st_h->reader.lsqr_size = test_reader_size;
+        st_h->reader.lsqr_ctx = create_lsquic_reader_ctx(st_h->req_path);
+        if (!st_h->reader.lsqr_ctx)
+            exit(1);
+    }
 
     if (s_immediate_write)
     {
@@ -1187,10 +1312,15 @@ http_server_on_close (lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
     free(st_h->req_path);
     if (st_h->reader.lsqr_ctx)
         destroy_lsquic_reader_ctx(st_h->reader.lsqr_ctx);
+#if HAVE_PREADV
+    if (s_pwritev)
+        close(st_h->file_fd);
+#endif
     if (st_h->req)
         interop_server_hset_destroy(st_h->req);
     free(st_h);
-    LSQ_INFO("%s called", __func__);
+    LSQ_INFO("%s called, has unacked data: %d", __func__,
+                                lsquic_stream_has_unacked_data(stream));
 }
 
 
@@ -1203,6 +1333,123 @@ const struct lsquic_stream_if http_server_if = {
     .on_close               = http_server_on_close,
     .on_goaway_received     = http_server_on_goaway,
 };
+
+
+#if HAVE_OPEN_MEMSTREAM
+static void
+hq_server_on_read (struct lsquic_stream *stream, lsquic_stream_ctx_t *st_h)
+{
+    char tbuf[0x100], *buf;
+    ssize_t nread;
+    char *path, *end, *filename;
+
+    if (!st_h->req_fh)
+        st_h->req_fh = open_memstream(&st_h->req_buf, &st_h->req_sz);
+
+    nread = lsquic_stream_read(stream, tbuf, sizeof(tbuf));
+    if (nread > 0)
+    {
+        fwrite(tbuf, 1, nread, st_h->req_fh);
+        return;
+    }
+
+    if (nread < 0)
+    {
+        LSQ_WARN("error reading request from stream: %s", strerror(errno));
+        lsquic_stream_close(stream);
+        return;
+    }
+
+    fwrite("", 1, 1, st_h->req_fh);
+    fclose(st_h->req_fh);
+    LSQ_INFO("got request: `%.*s'", (int) st_h->req_sz, st_h->req_buf);
+
+    buf = st_h->req_buf;
+    path = strchr(buf, ' ');
+    if (!path)
+    {
+        LSQ_WARN("invalid request (no space character): `%s'", buf);
+        lsquic_stream_close(stream);
+        return;
+    }
+    if (!(path - buf == 3 && 0 == strncasecmp(buf, "GET", 3)))
+    {
+        LSQ_NOTICE("unsupported method `%.*s'", (int) (path - buf), buf);
+        lsquic_stream_close(stream);
+        return;
+    }
+    ++path;
+    for (end = buf + st_h->req_sz - 1; end > path
+                && (*end == '\0' || *end == '\r' || *end == '\n'); --end)
+        *end = '\0';
+    LSQ_NOTICE("parsed out request path: %s", path);
+
+    filename = malloc(strlen(st_h->server_ctx->document_root) + 1 + strlen(path) + 1);
+    strcpy(filename, st_h->server_ctx->document_root);
+    strcat(filename, "/");
+    strcat(filename, path);
+    LSQ_NOTICE("file to fetch: %s", filename);
+    /* XXX This copy pasta is getting a bit annoying now: two mallocs of the
+     * same thing?
+     */
+    st_h->req_filename = filename;
+    st_h->req_path = strdup(filename);
+    st_h->reader.lsqr_read = test_reader_read;
+    st_h->reader.lsqr_size = test_reader_size;
+    st_h->reader.lsqr_ctx = create_lsquic_reader_ctx(st_h->req_path);
+    if (!st_h->reader.lsqr_ctx)
+    {
+        lsquic_stream_close(stream);
+        return;
+    }
+    lsquic_stream_shutdown(stream, 0);
+    lsquic_stream_wantwrite(stream, 1);
+}
+
+
+static void
+hq_server_on_write (struct lsquic_stream *stream, lsquic_stream_ctx_t *st_h)
+{
+    ssize_t nw;
+
+    nw = lsquic_stream_writef(stream, &st_h->reader);
+    if (nw < 0)
+    {
+        struct lsquic_conn *conn = lsquic_stream_conn(stream);
+        lsquic_conn_ctx_t *conn_h = lsquic_conn_get_ctx(conn);
+        if (conn_h->flags & RECEIVED_GOAWAY)
+        {
+            LSQ_NOTICE("cannot write: goaway received");
+            lsquic_stream_close(stream);
+        }
+        else
+        {
+            LSQ_ERROR("write error: %s", strerror(errno));
+            lsquic_stream_close(stream);
+        }
+    }
+    else if (bytes_left(st_h) > 0)
+    {
+        st_h->written += (size_t) nw;
+        lsquic_stream_wantwrite(stream, 1);
+    }
+    else
+    {
+        lsquic_stream_shutdown(stream, 1);
+        lsquic_stream_wantread(stream, 1);
+    }
+}
+
+
+const struct lsquic_stream_if hq_server_if = {
+    .on_new_conn            = http_server_on_new_conn,
+    .on_conn_closed         = http_server_on_conn_closed,
+    .on_new_stream          = http_server_on_new_stream,
+    .on_read                = hq_server_on_read,
+    .on_write               = hq_server_on_write,
+    .on_close               = http_server_on_close,
+};
+#endif
 
 
 #if HAVE_REGEX
@@ -1616,6 +1863,24 @@ new_req (enum method method, const char *path, const char *authority)
 }
 
 
+static ssize_t
+my_interop_preadv (void *user_data, const struct iovec *iov, int iovcnt)
+{
+    struct gen_file_ctx *const gfc = user_data;
+    size_t nread, nr;
+    int i;
+
+    nread = 0;
+    for (i = 0; i < iovcnt; ++i)
+    {
+        nr = idle_read(gfc, iov[i].iov_base, iov[i].iov_len);
+        nread += nr;
+    }
+
+    return (ssize_t) nread;
+}
+
+
 static void
 idle_on_write (lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
 {
@@ -1626,16 +1891,25 @@ idle_on_write (lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
     struct req *req;
     ssize_t nw;
     struct header_buf hbuf;
+    struct lsquic_reader reader;
 
     if (st_h->flags & SH_HEADERS_SENT)
     {
-        struct lsquic_reader reader =
+        if (s_pwritev)
         {
-            .lsqr_read = idle_read,
-            .lsqr_size = idle_size,
-            .lsqr_ctx = gfc,
-        };
-        nw = lsquic_stream_writef(stream, &reader);
+            nw = lsquic_stream_pwritev(stream, my_interop_preadv, gfc,
+                                                            gfc->remain);
+            if (nw == 0)
+                goto with_reader;
+        }
+        else
+        {
+  with_reader:
+            reader.lsqr_read = idle_read,
+            reader.lsqr_size = idle_size,
+            reader.lsqr_ctx = gfc,
+            nw = lsquic_stream_writef(stream, &reader);
+        }
         if (nw < 0)
         {
             LSQ_ERROR("error writing idle thoughts: %s", strerror(errno));
@@ -1660,8 +1934,14 @@ idle_on_write (lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                 headers.count = sizeof(header_arr) / sizeof(header_arr[0]);
                 req = new_req(GET, push_path->path, st_h->req->authority_str);
                 if (req)
-                    (void) lsquic_conn_push_stream(lsquic_stream_conn(stream),
-                                req, stream, &headers);
+                {
+                    if (0 != lsquic_conn_push_stream(lsquic_stream_conn(stream),
+                                                            req, stream, &headers))
+                    {
+                        LSQ_WARN("stream push failed");
+                        interop_server_hset_destroy(req);
+                    }
+                }
                 else
                     LSQ_WARN("cannot allocate req for push");
                 free(push_path);
@@ -1754,7 +2034,14 @@ usage (const char *prog)
 "   -p FILE     Push request with this path\n"
 "   -w SIZE     Write immediately (LSWS mode).  Argument specifies maximum\n"
 "                 size of the immediate write.\n"
+#if HAVE_PREADV
+"   -P SIZE     Use preadv(2) to read from disk and lsquic_stream_pwritev() to\n"
+"                 write to stream.  Positive SIZE indicate maximum value per\n"
+"                 write; negative means always use remaining file size.\n"
+"                 Incompatible with -w.\n"
+#endif
 "   -y DELAY    Delay response for this many seconds -- use for debugging\n"
+"   -Q ALPN     Use hq mode; ALPN could be \"hq-29\", for example.\n"
             , prog);
 }
 
@@ -1803,23 +2090,6 @@ interop_server_hset_prepare_decode (void *hset_p, struct lsxpack_header *xhdr,
 }
 
 
-#ifdef WIN32
-char *
-strndup (const char *s, size_t n)
-{
-    char *copy;
-
-    copy = malloc(n + 1);
-    if (!copy)
-        return NULL;
-
-    memcpy(copy, s, n);
-    copy[n] = '\0';
-    return copy;
-}
-#endif
-
-
 static int
 interop_server_hset_add_header (void *hset_p, struct lsxpack_header *xhdr)
 {
@@ -1828,7 +2098,16 @@ interop_server_hset_add_header (void *hset_p, struct lsxpack_header *xhdr)
     unsigned name_len, value_len;
 
     if (!xhdr)
-        return 0;
+    {
+        if (req->pseudo_headers == (PH_AUTHORITY|PH_METHOD|PH_PATH))
+            return 0;
+        else
+        {
+            LSQ_INFO("%s: missing some pseudo-headers: 0x%X", __func__,
+                req->pseudo_headers);
+            return 1;
+        }
+    }
 
     name = lsxpack_header_get_name(xhdr);
     value = lsxpack_header_get_value(xhdr);
@@ -1855,6 +2134,7 @@ interop_server_hset_add_header (void *hset_p, struct lsxpack_header *xhdr)
         req->path = strndup(value, value_len);
         if (!req->path)
             return -1;
+        req->pseudo_headers |= PH_PATH;
         return 0;
     }
 
@@ -1871,6 +2151,7 @@ interop_server_hset_add_header (void *hset_p, struct lsxpack_header *xhdr)
             req->method = POST;
         else
             req->method = UNSUPPORTED;
+        req->pseudo_headers |= PH_METHOD;
         return 0;
     }
 
@@ -1879,6 +2160,7 @@ interop_server_hset_add_header (void *hset_p, struct lsxpack_header *xhdr)
         req->authority_str = strndup(value, value_len);
         if (!req->authority_str)
             return -1;
+        req->pseudo_headers |= PH_AUTHORITY;
         return 0;
     }
 
@@ -1914,6 +2196,7 @@ main (int argc, char **argv)
     struct stat st;
     struct server_ctx server_ctx;
     struct prog prog;
+    const char *const *alpn;
 
 #if !(HAVE_OPEN_MEMSTREAM || HAVE_REGEX)
     fprintf(stderr, "cannot run server without regex or open_memstream\n");
@@ -1924,18 +2207,8 @@ main (int argc, char **argv)
     TAILQ_INIT(&server_ctx.sports);
     server_ctx.prog = &prog;
 
-    /* eQUIC initialization and setup */
-    equic_t equic;
-    equic_get_interface(&equic, "eth0");
-    equic_read_object(&equic, "/src/equic/bin/equic_kern.o");
-
-    signal(SIGINT, equic_sigint_callback);
-    signal(SIGTERM, equic_sigterm_callback);
-
-    equic_load(&equic);
-
-    server_ctx.equic = &equic;
-
+    // eQUIC
+    server_ctx.has_eBPF = 0;
     requests_per_second = 0;
     pthread_mutex_init(&lock, NULL);
     pthread_create(&tid, NULL, &request_counter, NULL);
@@ -1943,9 +2216,25 @@ main (int argc, char **argv)
     prog_init(&prog, LSENG_SERVER|LSENG_HTTP, &server_ctx.sports,
                                             &http_server_if, &server_ctx);
 
-    while (-1 != (opt = getopt(argc, argv, PROG_OPTS "y:Y:n:p:r:w:h")))
+    // eQUIC
+    while (-1 != (opt = getopt(argc, argv, PROG_OPTS "y:Y:n:p:r:w:P:he"
+#if HAVE_OPEN_MEMSTREAM
+                                                    "Q:"
+#endif
+                                                                        )))
     {
         switch (opt) {
+        case 'e':
+            /* eQUIC initialization and setup */
+            server_ctx.has_eBPF = 1;
+            equic_t equic;
+            equic_get_interface(&equic, "eth0");
+            equic_read_object(&equic, "/src/equic/bin/equic_kern.o");
+            signal(SIGINT, equic_sigint_callback);
+            signal(SIGTERM, equic_sigterm_callback);
+            equic_load(&equic);
+            server_ctx.equic = &equic;
+            break;
         case 'n':
             server_ctx.max_conn = atoi(optarg);
             break;
@@ -1970,6 +2259,15 @@ main (int argc, char **argv)
         case 'w':
             s_immediate_write = atoi(optarg);
             break;
+        case 'P':
+#if HAVE_PREADV
+            s_pwritev = strtoull(optarg, NULL, 10);
+            break;
+#else
+            fprintf(stderr, "preadv is not supported on this platform, "
+                                                        "cannot use -P\n");
+            exit(EXIT_FAILURE);
+#endif
         case 'y':
             server_ctx.delay_resp_sec = atoi(optarg);
             break;
@@ -1977,6 +2275,14 @@ main (int argc, char **argv)
             usage(argv[0]);
             prog_print_common_options(&prog, stdout);
             exit(0);
+#if HAVE_OPEN_MEMSTREAM
+        case 'Q':
+            /* XXX A bit hacky, as `prog' has already been initialized... */
+            prog.prog_engine_flags &= ~LSENG_HTTP;
+            prog.prog_api.ea_stream_if = &hq_server_if;
+            add_alpn(optarg);
+            break;
+#endif
         default:
             if (0 != prog_set_opt(&prog, opt, optarg))
                 exit(1);
@@ -1995,6 +2301,24 @@ main (int argc, char **argv)
         LSQ_ERROR("Document root is not set: use -r option");
         exit(EXIT_FAILURE);
 #endif
+    }
+
+    if (s_immediate_write && s_pwritev)
+    {
+        LSQ_ERROR("-w and -P are incompatible options");
+        exit(EXIT_FAILURE);
+    }
+
+    alpn = lsquic_get_h3_alpns(prog.prog_settings.es_versions);
+    while (*alpn)
+    {
+        if (0 == add_alpn(*alpn))
+            ++alpn;
+        else
+        {
+            LSQ_ERROR("cannot add ALPN %s", *alpn);
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (0 != prog_prep(&prog))
