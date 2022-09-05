@@ -105,6 +105,7 @@ help: greetings
 	@echo " run_client          Runs the lsquic echo binary as a client"
 	@echo " http_server         Runs the lsquic http binary as a server"
 	@echo " http_client         Runs the lsquic http binary as a client"
+	@echo " equic_http_server   Runs the lsquic http binary as a server with -e option (eQUIC)"
 	@echo
 
 
@@ -251,6 +252,12 @@ run_client: $(LSQUIC_PATH)/bin/echo_client
 http_server: $(LSQUIC_PATH)/bin/http_server
 	$(eval SSL_DIR=/src/equic/ssl)
 	$< -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key > $(LOGS)/$(NOW)-$(LOG_SUFFIX).log
+
+
+.PHONY: equic_http_server
+equic_http_server: $(LSQUIC_PATH)/bin/http_server
+	$(eval SSL_DIR=/src/equic/ssl)
+	$< -e -c localhost,$(SSL_DIR)/cert.pem,$(SSL_DIR)/private.key > $(LOGS)/$(NOW)-$(LOG_SUFFIX).log
 
 
 .PHONY: http_client
